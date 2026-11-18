@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f1ec">
+    <title>Refaccionaria | Productos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor">
+            <button class="boton-menu" id="boton-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="panel">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="logo">REFACCIONARIA</a>
+            <a href="carrito.html" class="boton-carrito" id="boton-carrito" aria-label="Carrito" hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21.5 7H6"/></svg>
+                <span class="carrito-cuenta" hidden>0</span>
+            </a>
+            <button class="boton boton-borde boton-chico accion-sesion">Entrar</button>
+        </div>
+    </header>
+
+    <nav class="panel" id="panel" aria-label="Menú principal">
+        <div class="panel-cabecera">
+            <span class="logo">REFACCIONARIA</span>
+            <button class="panel-cerrar" id="cerrar-menu" aria-label="Cerrar menú">✕</button>
+        </div>
+        <p class="panel-usuario" id="panel-usuario">No has iniciado sesión</p>
+        <ul class="panel-enlaces">
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="index.html#promociones">Promociones</a></li>
+            <li><a href="producto.html" aria-current="page">Productos</a></li>
+            <li><a href="ordenes.html">Órdenes</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="mensajes.html">Mensajes</a></li>
+        </ul>
+        <div class="panel-pie">
+            <button class="boton accion-sesion">Iniciar sesión</button>
+        </div>
+    </nav>
+    <div class="fondo-oscuro" id="fondo-oscuro"></div>
+
+    <main>
+        <div class="contenedor">
+            <div class="cabecera-pagina cabecera-con-accion">
+                <div>
+                    <span class="etiqueta-seccion">Catálogo</span>
+                    <h1>Productos</h1>
+                </div>
+                <button class="boton" id="boton-nuevo-producto" hidden>+ Nuevo producto</button>
+            </div>
+
+            <div class="barra-filtros">
+                <label for="filtro-buscar" class="solo-lector">Buscar producto</label>
+                <input type="search" id="filtro-buscar" class="campo-busqueda" placeholder="Buscar por nombre…" enterkeyhint="search">
+                <div class="chips" id="chips-categorias" role="group" aria-label="Filtrar por categoría"></div>
+                <div class="fila-filtros">
+                    <span class="contador" id="contador"></span>
+                    <label class="interruptor">
+                        <input type="checkbox" id="filtro-disponibles">
+                        Solo con existencia
+                    </label>
+                </div>
+            </div>
+
+            <div class="rejilla" id="lista-productos"></div>
+            <div class="vacio" id="sin-resultados" hidden>
+                <h2>No encontramos productos</h2>
+                <p>Prueba con otra palabra o quita los filtros.</p>
+                <button class="boton boton-borde" id="limpiar-filtros">Quitar filtros</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Agregar o editar un producto (solo el Administrador) -->
+    <dialog class="dialogo dialogo-ancho" id="dialogo-producto">
+        <form id="form-producto" novalidate>
+            <h2 id="producto-titulo">Nuevo producto</h2>
+            <div class="campo">
+                <label for="prod-nombre">Nombre</label>
+                <input type="text" id="prod-nombre" maxlength="100" placeholder="Ej. Balatas delanteras">
+                <span class="mensaje-error" id="error-prod-nombre"></span>
+            </div>
+            <div class="campo">
+                <label for="prod-descripcion">Descripción (opcional)</label>
+                <input type="text" id="prod-descripcion" maxlength="255">
+                <span class="mensaje-error" id="error-prod-descripcion"></span>
+            </div>
+            <div class="campos-juntos">
+                <div class="campo">
+                    <label for="prod-precio">Precio</label>
+                    <input type="number" id="prod-precio" min="0" step="0.01" inputmode="decimal">
+                    <span class="mensaje-error" id="error-prod-precio"></span>
+                </div>
+                <div class="campo">
+                    <label for="prod-stock">Existencia</label>
+                    <input type="number" id="prod-stock" min="0" step="1" inputmode="numeric">
+                    <span class="mensaje-error" id="error-prod-stock"></span>
+                </div>
+                <div class="campo">
+                    <label for="prod-categoria">Categoría</label>
+                    <select id="prod-categoria"></select>
+                    <span class="mensaje-error" id="error-prod-categoria"></span>
+                </div>
+            </div>
+            <div class="campo">
+                <label for="prod-imagen">Foto (opcional)</label>
+                <input type="text" id="prod-imagen" maxlength="255" placeholder="img/productos/foto.jpg" spellcheck="false" autocomplete="off">
+                <span class="nota-campo">Pon la foto en la carpeta Frontend/img/productos y escribe aquí su ruta, o pega una dirección https:// de una foto que puedas usar.</span>
+                <span class="mensaje-error" id="error-prod-imagen"></span>
+            </div>
+            <p class="nota-campo" id="nota-stock" hidden>La existencia no se edita aquí: sube con las compras y baja con las ventas, así queda registrada en el inventario.</p>
+            <p class="mensaje-error" id="producto-error"></p>
+            <div class="acciones-dialogo">
+                <button type="button" class="boton boton-peligro boton-izquierda" id="eliminar-producto" hidden>Eliminar</button>
+                <button type="button" class="boton boton-borde" data-cerrar>Cancelar</button>
+                <button type="submit" class="boton" id="guardar-producto">Guardar producto</button>
+            </div>
+        </form>
+    </dialog>
+
+    <footer class="pie-pagina">
+        <div class="contenedor">
+            <span>© 2026 Refaccionaria</span>
+            <a href="contacto.html">Contacto y soporte</a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

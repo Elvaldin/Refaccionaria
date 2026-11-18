@@ -1,0 +1,231 @@
+# Refaccionaria — Sistema de refacciones para autos
+
+Sistema web para una refaccionaria: catálogo de productos, promociones, órdenes de compra y venta con control de inventario, inicio de sesión y un chat de soporte entre clientes y personal.
+
+Está hecho con **microservicios en Python (FastAPI)**, un **Gateway en Go** que los conecta, una **página web en HTML, CSS y JavaScript** y una base de datos en **SQL Server**.
+
+```
+Página web (Frontend)          HTML, CSS y JavaScript
+        │  fetch
+        ▼
+Gateway en Go  :8080           Una sola entrada para todas las APIs
+        │  reenvía
+        ▼
+Microservicios en Python       Login :8000 · Productos :8001 · Promociones :8002
+(FastAPI)                      Órdenes :8003 · Soporte :8004
+        │  SQL
+        ▼
+SQL Server                     Base de datos "Refaccionaria"
+```
+
+## Qué hace
+
+| Requisito | Dónde está |
+|---|---|
+| Inicio de sesión y roles | Ventana "Iniciar sesión" en la página → microservicio **Login** (contraseñas con bcrypt). 4 roles: Administrador, Empleado, Almacenista y Cliente |
+| Registrar usuario nuevo | "Regístrate" en la ventana de inicio de sesión (queda como Cliente). El Administrador crea usuarios de cualquier rol desde el menú |
+| Dashboard con promociones | Página de inicio → `GET /api/dashboard` (solo promociones vigentes) |
+| Promociones de la tienda | Microservicio **Promociones**: descuentos por fechas y productos. El Administrador las crea, edita y elimina desde la portada |
+| Menú hamburguesa / panel | Botón ☰ en todas las páginas |
+| Productos | Página **Productos**: búsqueda, categorías y existencias. El Administrador agrega, edita y elimina productos ahí mismo |
+| Detalle del producto | Clic en un producto → **detalle.html?id=3**: precio, promoción, existencia, productos de la misma categoría. El personal registra la venta desde ahí con la orden ya llenada |
+| Carrito | El Cliente agrega piezas desde el catálogo o el detalle y hace su pedido en **carrito.html**. Se guarda en el navegador (`localStorage`); para hacer el pedido hay que iniciar sesión |
+| Órdenes que entran y salen, con detalle | Página **Órdenes** → microservicio **Órdenes** (Compra = entra, Venta = sale) |
+| Almacén (stock) | Página **Almacén**, solo para el Almacenista y el Administrador (aparece en el menú ☰): existencia de cada producto, piezas y valor del inventario, qué hay que surtir (8 o menos) o está agotado, lo que está por entrar y por salir, el historial de movimientos de cada producto y el botón **Surtir** que abre la compra ya llenada |
+| Soporte: correo, teléfono y dirección | Página **Contacto** → microservicio **Soporte** |
+| Chat de soporte | El Cliente escribe desde **Contacto** y platica en la página **Mensajes**. El Administrador y los Empleados contestan, cierran y reabren; solo el Administrador elimina |
+
+## Estructura del proyecto
+
+```
+Login/
+├── BD/
+│   ├── 01_crear_base.sql        Crea la base y las 11 tablas
+│   ├── 02_datos_ejemplo.sql     Usuarios, catálogo real (5 categorías, 23 piezas) y el contacto
+│   ├── 03_agregar_horario.sql   Solo para bases creadas antes de la columna Horario
+│   ├── 04_agregar_roles.sql     Solo para bases creadas antes de los 4 roles
+│   ├── 05_categoria_unicas.sql  Solo para bases creadas antes de los nombres de categoría únicos
+│   ├── 06_texto_unicode.sql     Solo para bases creadas antes de que los textos aceptaran emojis
+│   ├── 07_numeros_sin_saltos.sql Quita los saltos de 1000 en los números (REF-5021 → REF-011)
+│   ├── 08_agregar_imagen.sql    Solo para bases creadas antes de la foto de cada producto
+│   └── 09_borrar_datos_de_prueba.sql ⚠️ Borra órdenes, chats, promociones y productos (una sola vez, antes de abrir)
+├── Backend/                     Microservicios en Python
+│   ├── requirements.txt
+│   ├── .env.example             Plantilla de la conexión a la base de datos
+│   ├── Login/                   :8000
+│   ├── Productos/               :8001
+│   ├── Promociones/             :8002
+│   ├── Ordenes/                 :8003
+│   └── Soporte/                 :8004
+│       ├── Domain/              Entidades del negocio
+│       ├── Application/         Casos de uso e interfaces
+│       ├── Infrastructure/      SQL Server, bcrypt
+│       ├── API/                 Rutas HTTP (FastAPI)
+│       └── tests/               Pruebas de los casos de uso
+├── Backend-Go/gateway/          Gateway en Go :8080
+├── Frontend/                    Página web
+│   ├── index.html               Inicio y dashboard de promociones
+│   ├── producto.html            Catálogo
+│   ├── detalle.html             Detalle de un producto
+│   ├── carrito.html             Carrito del cliente
+│   ├── ordenes.html             Órdenes e inventario
+│   ├── almacen.html             Stock de la tienda (Almacenista y Administrador)
+│   ├── contacto.html            Soporte
+│   ├── mensajes.html            Chat de soporte
+│   ├── img/productos/           Fotos de las piezas
+│   ├── estilo.css
+│   └── script.js
+├── docs/
+│   ├── ARQUITECTURA.md          Capas, dependencias y decisiones
+│   └── API.md                   Todas las rutas de la API
+├── pruebas/prueba_api.py        Prueba de punta a punta por el Gateway
+├── iniciar.sh                   Arranca todo con un solo comando
+└── pruebas.sh                   Corre todas las pruebas automáticas
+```
+
+Cada microservicio sigue **arquitectura limpia** con 4 capas. La explicación completa está en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
+
+## Requisitos
+
+- **SQL Server** 2019 o 2022. En Mac se puede usar Docker:
+  ```bash
+  docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=TuContraseña123" -p 1433:1433 --name sql_server_container -d mcr.microsoft.com/mssql/server:2022-latest
+  ```
+- **ODBC Driver 17 for SQL Server**
+- **Python 3.9** o más nuevo
+- **Go 1.22** o más nuevo (el proyecto se probó con Go 1.27)
+
+## Instalación
+
+**1. Base de datos.** En SQL Server (Azure Data Studio, SSMS o `sqlcmd`) ejecuta en este orden:
+
+1. `BD/01_crear_base.sql`
+2. `BD/02_datos_ejemplo.sql`
+
+Los dos se pueden correr varias veces: solo crean lo que falta y no duplican datos. Si tu base ya existía, vuelve a correr `01_crear_base.sql` para que se creen las tablas nuevas, como las del chat. `BD/03_agregar_horario.sql`, `BD/04_agregar_roles.sql`, `BD/05_categoria_unicas.sql` y `BD/06_texto_unicode.sql` solo hacen falta si tu base se creó antes de que existieran la columna `Horario`, los roles, los nombres de categoría únicos o los textos con emojis (antes un 😀 en el chat se guardaba como `??`).
+
+`BD/07_numeros_sin_saltos.sql` evita que SQL Server se brinque 1000 números cada vez que se reinicia (por eso un producto nuevo podía salir como `REF-5021`), y regresa cada contador al número más alto que existe. No cambia datos. Córrelo si tu base ya existía, o si ves códigos con saltos grandes. Es normal que falten números sueltos cuando algo se borra: SQL Server no reutiliza los números borrados.
+
+`BD/08_agregar_imagen.sql` agrega la columna `Imagen` (la foto de cada producto) a una base que ya existía. `BD/09_borrar_datos_de_prueba.sql` **borra para siempre** las órdenes, movimientos, promociones, chats, productos y categorías (no los usuarios ni el contacto) y reinicia los números; úsalo una sola vez antes de abrir la tienda y después vuelve a correr `02_datos_ejemplo.sql`.
+
+`BD/10_usuario_app.sql` crea el usuario de SQL Server `refaccionaria_app`, con el que entran los 5 microservicios: solo puede leer y escribir datos de `Refaccionaria` (no borrar tablas ni tocar otras bases), así que la app ya no usa `sa`. Antes de ejecutarlo cambia `PEGA-AQUI-LA-CONTRASENA` por una contraseña nueva y, al terminar, cierra el archivo **sin guardar**. `BD/11_quitar_usuarios_de_prueba.sql` es **solo para producción** (ver [Antes de publicar en Internet](#antes-de-publicar-en-internet)).
+
+**Fotos de los productos.** Están en `Frontend/img/productos`. Si agregas una foto, ponla en esa carpeta y escribe su ruta (`img/productos/archivo.jpg`) en el campo **Foto** al editar el producto.
+
+**2. Entorno de Python.** Desde la carpeta `Login`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r Backend/requirements.txt
+```
+
+**3. Conexión a la base de datos.** Copia la plantilla a cada microservicio:
+
+```bash
+for s in Login Productos Promociones Ordenes Soporte; do cp Backend/.env.example Backend/$s/.env; done
+```
+
+Después abre cada `.env` y llena:
+
+- `BD_PASSWORD`: la contraseña que le pusiste a `refaccionaria_app` en `BD/10_usuario_app.sql`.
+- `TOKEN_SECRETO`: la clave con la que Login firma los tokens de sesión y los demás servicios los revisan. **Debe ser la misma en los 5 `.env`**. Genera una con:
+  ```bash
+  python3 -c "import secrets; print(secrets.token_hex(32))"
+  ```
+
+## Cómo correrlo
+
+```bash
+./iniciar.sh
+```
+
+Arranca los 5 microservicios y el Gateway. Para apagarlos todos, presiona **Ctrl+C**. Después abre `Frontend/index.html` en el navegador.
+
+Antes de arrancar, el script:
+
+- Avisa si SQL Server no responde (por ejemplo, si Docker está apagado).
+- Revisa los puertos. Si quedó prendida una copia vieja de este proyecto (por ejemplo, un microservicio trabado de una vez anterior), la cierra sola (🔄). Si el puerto lo usa **otro programa**, dice cuál es y no arranca nada.
+- Al final muestra ✅ o ❌ por cada servicio, según si de verdad contesta.
+
+| Dirección | Qué hay |
+|---|---|
+| http://127.0.0.1:8080/ | Gateway: lista de todas las APIs y si cada microservicio está encendido |
+| http://127.0.0.1:8080/docs | Documentación interactiva (Swagger) de las 5 APIs |
+| http://127.0.0.1:8000/docs … 8004/docs | Documentación de cada microservicio por separado |
+
+**Usuarios de prueba (solo para tu computadora):**
+
+> ⚠️ Estas contraseñas son públicas porque están en este README. Sirven para desarrollar, para la demo y para `pruebas.sh`, pero **no deben existir en la tienda publicada**: ver [Antes de publicar en Internet](#antes-de-publicar-en-internet).
+
+| Usuario | Contraseña | Rol | Qué puede hacer |
+|---|---|---|---|
+| `admin` | `Admin123` | Administrador | Todo: ventas, compras, cancelar, registrar usuarios de cualquier rol, administrar productos, categorías y promociones, y contestar o eliminar conversaciones del chat |
+| `empleado` | `Empleado123` | Empleado | Hace ventas y las avanza. Contesta y cierra las conversaciones del chat. No registra compras ni cancela |
+| `almacen` | `Almacen123` | Almacenista | Registra compras (mercancía que entra) y las avanza. Ve el inventario en la página **Almacén**. No atiende el chat |
+| `cliente` | `Cliente123` | Cliente | Hace pedidos y solo ve los suyos. Escribe al chat de soporte. No ve el inventario |
+
+**Sesión con token.** Al iniciar sesión, el microservicio de Login regresa un token firmado con `TOKEN_SECRETO` que dura 8 horas. La página lo manda en cada petición (`Authorization: Bearer <token>`) y cada microservicio saca de ahí quién eres; ya no se le cree al `id_login` que mande la página. Si el token es falso, está alterado o venció, la API responde 401 y la página cierra la sesión.
+
+## Antes de publicar en Internet
+
+En la base de datos del servidor (no en tu computadora):
+
+1. Corre `BD/01_crear_base.sql` y `BD/02_datos_ejemplo.sql` (crean las tablas, el catálogo y los usuarios de prueba).
+2. Corre `BD/10_usuario_app.sql` con una contraseña **nueva** (no la de tu computadora) y ponla en los `.env` del servidor, junto con un `TOKEN_SECRETO` **nuevo**.
+3. Corre `BD/11_quitar_usuarios_de_prueba.sql`: borra `empleado`, `almacen` y `cliente`.
+4. Cámbiale la contraseña al admin (pide una de 12 caracteres o más y no la muestra en pantalla):
+   ```bash
+   cd Backend/Login && ../../.venv/bin/python cambiar_contrasena.py admin
+   ```
+5. Crea las cuentas reales del personal desde la página, entrando como admin (**Registrar usuario**).
+
+## Pruebas automáticas
+
+```bash
+./pruebas.sh
+```
+
+| Qué prueba | Cuántas | ¿Necesita la base de datos? |
+|---|---|---|
+| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña | 98 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
+| **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 37 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
+
+También se pueden correr por separado:
+
+```bash
+cd Backend/Ordenes && ../../.venv/bin/python -m unittest discover -s tests -t . -v
+.venv/bin/python pruebas/prueba_api.py -v
+```
+
+## Cómo probar el flujo de órdenes
+
+1. Inicia sesión con `admin` / `Admin123`.
+2. Ve a **Órdenes** → **+ Nueva orden**.
+3. Elige **Venta**, agrega productos y guarda. La orden queda **Pendiente**.
+4. En el detalle, presiona **Pasar a Completada**. El stock baja y aparece una **Salida** en "Movimientos de inventario".
+5. Haz lo mismo con una **Compra**: al completarla el stock sube y aparece una **Entrada**.
+
+Si una venta pide más piezas de las que hay, no se puede completar y la página explica por qué.
+
+## Cómo probar el chat de soporte
+
+1. Inicia sesión con `cliente` / `Cliente123` → **Contacto** → elige un asunto, escribe y presiona **Enviar mensaje**. Se abre la conversación en **Mensajes**.
+2. En otra ventana (por ejemplo, una ventana privada), inicia sesión con `empleado` o `admin` → **Mensajes**. La conversación aparece como **Sin contestar**. Contéstala.
+3. En la ventana del cliente la respuesta aparece sola: la página busca mensajes nuevos cada 5 segundos.
+4. El personal puede **Cerrar** la conversación; ya cerrada, nadie puede escribir. Solo el Administrador la puede **Eliminar**.
+
+## Límites conocidos
+
+- **El token no se puede revocar.** Si cambias la contraseña de alguien, las sesiones que ya tenía abiertas siguen activas hasta que venza su token (8 horas). Para cerrar todas las sesiones de golpe, cambia `TOKEN_SECRETO` en los 5 `.env` y reinicia.
+- **El chat no es en tiempo real.** La página pregunta cada 5 segundos si hay mensajes nuevos. Para que lleguen al instante se usaría WebSocket.
+
+## Notas
+
+- Los archivos `.env` tienen la contraseña de la base de datos y **no se entregan** (ver `.gitignore`).
+- El stock solo cambia cuando una orden pasa a **Completada**. Cancelarla no mueve inventario. Por eso, al editar un producto la existencia no se cambia a mano: solo se escribe al crearlo.
+- Si SQL Server corre en Docker, su reloj está en hora UTC (6 horas adelante de México), y así se ven las horas de las órdenes.
+- Para entregar el proyecto sin `.env` ni `.venv`:
+  ```bash
+  cd .. && zip -r Refaccionaria-entrega.zip Login -x "Login/.venv/*" "*/.env" "*/__pycache__/*" "*.DS_Store" "Login/.claude/*"
+  ```

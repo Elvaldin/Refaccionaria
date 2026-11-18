@@ -1,0 +1,10 @@
+# Contraseñas y configuración local (cada quien hace la suya con .env.example)
+.env
+
+# Entorno virtual de Python (cada quien lo crea con requirements.txt)
+.venv/
+
+# Archivos que generan Python y macOS
+__pycache__/
+*.pyc
+.DS_Store

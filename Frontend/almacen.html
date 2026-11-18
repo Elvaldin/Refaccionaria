@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f1ec">
+    <title>Refaccionaria | Almacén</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor">
+            <button class="boton-menu" id="boton-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="panel">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="logo">REFACCIONARIA</a>
+            <a href="carrito.html" class="boton-carrito" id="boton-carrito" aria-label="Carrito" hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21.5 7H6"/></svg>
+                <span class="carrito-cuenta" hidden>0</span>
+            </a>
+            <button class="boton boton-borde boton-chico accion-sesion">Entrar</button>
+        </div>
+    </header>
+
+    <nav class="panel" id="panel" aria-label="Menú principal">
+        <div class="panel-cabecera">
+            <span class="logo">REFACCIONARIA</span>
+            <button class="panel-cerrar" id="cerrar-menu" aria-label="Cerrar menú">✕</button>
+        </div>
+        <p class="panel-usuario" id="panel-usuario">No has iniciado sesión</p>
+        <ul class="panel-enlaces">
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="index.html#promociones">Promociones</a></li>
+            <li><a href="producto.html">Productos</a></li>
+            <li><a href="ordenes.html">Órdenes</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="mensajes.html">Mensajes</a></li>
+        </ul>
+        <div class="panel-pie">
+            <button class="boton accion-sesion">Iniciar sesión</button>
+        </div>
+    </nav>
+    <div class="fondo-oscuro" id="fondo-oscuro"></div>
+
+    <main>
+        <div class="contenedor">
+            <div class="cabecera-pagina cabecera-con-accion">
+                <div>
+                    <span class="etiqueta-seccion">Inventario</span>
+                    <h1>Almacén</h1>
+                    <p class="subtitulo-pagina">Lo que hay en stock, lo que está por entrar y por salir, y qué hay que surtir.</p>
+                </div>
+                <a class="boton" href="ordenes.html" id="boton-ir-ordenes">Ver órdenes</a>
+            </div>
+
+            <div id="almacen">
+                <div class="resumen-almacen" id="resumen-almacen"></div>
+
+                <div class="barra-filtros barra-almacen">
+                    <label for="buscar-almacen" class="solo-lector">Buscar producto</label>
+                    <input type="search" id="buscar-almacen" class="buscador-almacen" placeholder="Buscar por nombre o código (ej. REF-005)…">
+                    <div class="chips" id="filtro-almacen" role="group" aria-label="Filtrar por existencia">
+                        <button class="chip" data-filtro="todos" aria-pressed="true">Todos</button>
+                        <button class="chip" data-filtro="surtir" aria-pressed="false">⚠ Por surtir</button>
+                        <button class="chip" data-filtro="agotados" aria-pressed="false">✘ Agotados</button>
+                    </div>
+                    <span class="contador" id="contador-almacen"></span>
+                </div>
+
+                <div class="tabla-envoltura">
+                    <table class="tabla tabla-almacen">
+                        <thead>
+                            <tr>
+                                <th><button class="ordenar" data-orden="nombre">Producto</button></th>
+                                <th>Categoría</th>
+                                <th class="numero"><button class="ordenar" data-orden="stock">Existencia</button></th>
+                                <th title="Órdenes Pendientes o En Proceso: compras que van a entrar y ventas que van a salir">Por mover</th>
+                                <th class="numero"><button class="ordenar" data-orden="valor">Valor</button></th>
+                                <th><span class="solo-lector">Acciones</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-almacen"></tbody>
+                    </table>
+                </div>
+                <p class="nota-campo nota-almacen">“Por surtir” = 8 piezas o menos. “Por mover” = compras (+) y ventas (−) que todavía están Pendientes o En Proceso. La existencia solo cambia cuando una orden pasa a <strong>Completada</strong>.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="pie-pagina">
+        <div class="contenedor">
+            <span>© 2026 Refaccionaria</span>
+            <a href="contacto.html">Contacto y soporte</a>
+        </div>
+    </footer>
+
+    <!-- Movimientos de un producto -->
+    <dialog class="dialogo dialogo-ancho" id="dialogo-movimientos">
+        <div class="dialogo-contenido">
+            <div class="dialogo-titulo">
+                <h2 id="movimientos-titulo">Movimientos</h2>
+                <button class="panel-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+            </div>
+            <div id="movimientos-cuerpo"></div>
+        </div>
+    </dialog>
+
+    <script src="script.js"></script>
+</body>
+</html>

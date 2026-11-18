@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f1ec">
+    <title>Refaccionaria | Mensajes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor">
+            <button class="boton-menu" id="boton-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="panel">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="logo">REFACCIONARIA</a>
+            <a href="carrito.html" class="boton-carrito" id="boton-carrito" aria-label="Carrito" hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21.5 7H6"/></svg>
+                <span class="carrito-cuenta" hidden>0</span>
+            </a>
+            <button class="boton boton-borde boton-chico accion-sesion">Entrar</button>
+        </div>
+    </header>
+
+    <nav class="panel" id="panel" aria-label="Menú principal">
+        <div class="panel-cabecera">
+            <span class="logo">REFACCIONARIA</span>
+            <button class="panel-cerrar" id="cerrar-menu" aria-label="Cerrar menú">✕</button>
+        </div>
+        <p class="panel-usuario" id="panel-usuario">No has iniciado sesión</p>
+        <ul class="panel-enlaces">
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="index.html#promociones">Promociones</a></li>
+            <li><a href="producto.html">Productos</a></li>
+            <li><a href="ordenes.html">Órdenes</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="mensajes.html" aria-current="page">Mensajes</a></li>
+        </ul>
+        <div class="panel-pie">
+            <button class="boton accion-sesion">Iniciar sesión</button>
+        </div>
+    </nav>
+    <div class="fondo-oscuro" id="fondo-oscuro"></div>
+
+    <main>
+        <div class="contenedor">
+            <div class="cabecera-pagina cabecera-con-accion">
+                <div>
+                    <span class="etiqueta-seccion">Soporte</span>
+                    <h1>Mensajes</h1>
+                    <p class="subtitulo-pagina" id="subtitulo-mensajes">Chat con la refaccionaria.</p>
+                </div>
+                <a class="boton" href="contacto.html#form-contacto" id="boton-nueva-conversacion" hidden>+ Nueva conversación</a>
+            </div>
+
+            <div class="chat" id="chat">
+                <aside class="chat-lista">
+                    <div class="chips" id="filtro-conversaciones" role="group" aria-label="Filtrar conversaciones">
+                        <button class="chip" data-estado="Abierta" aria-pressed="true">Abiertas</button>
+                        <button class="chip" data-estado="Cerrada" aria-pressed="false">Cerradas</button>
+                    </div>
+                    <ul class="lista-conversaciones" id="lista-conversaciones"></ul>
+                </aside>
+
+                <section class="chat-ventana" aria-label="Conversación">
+                    <div class="chat-cabecera">
+                        <button class="chat-volver" id="chat-volver" aria-label="Volver a la lista">←</button>
+                        <div class="chat-titulo">
+                            <h2 id="chat-asunto">Elige una conversación</h2>
+                            <small id="chat-datos"></small>
+                        </div>
+                        <div class="chat-acciones" id="chat-acciones"></div>
+                    </div>
+                    <div class="chat-mensajes" id="chat-mensajes">
+                        <p class="chat-vacio">Elige una conversación de la lista para ver los mensajes.</p>
+                    </div>
+                    <p class="mensaje-error" id="chat-error"></p>
+                    <form class="chat-escribir" id="form-mensaje" novalidate hidden>
+                        <label for="texto-mensaje" class="solo-lector">Escribe tu mensaje</label>
+                        <textarea id="texto-mensaje" rows="2" maxlength="1000" placeholder="Escribe un mensaje…"></textarea>
+                        <button class="boton" type="submit" id="enviar-mensaje">Enviar</button>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="pie-pagina">
+        <div class="contenedor">
+            <span>© 2026 Refaccionaria</span>
+            <a href="contacto.html">Contacto y soporte</a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

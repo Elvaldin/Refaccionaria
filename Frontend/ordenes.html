@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f1ec">
+    <title>Refaccionaria | Órdenes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor">
+            <button class="boton-menu" id="boton-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="panel">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="logo">REFACCIONARIA</a>
+            <a href="carrito.html" class="boton-carrito" id="boton-carrito" aria-label="Carrito" hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21.5 7H6"/></svg>
+                <span class="carrito-cuenta" hidden>0</span>
+            </a>
+            <button class="boton boton-borde boton-chico accion-sesion">Entrar</button>
+        </div>
+    </header>
+
+    <nav class="panel" id="panel" aria-label="Menú principal">
+        <div class="panel-cabecera">
+            <span class="logo">REFACCIONARIA</span>
+            <button class="panel-cerrar" id="cerrar-menu" aria-label="Cerrar menú">✕</button>
+        </div>
+        <p class="panel-usuario" id="panel-usuario">No has iniciado sesión</p>
+        <ul class="panel-enlaces">
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="index.html#promociones">Promociones</a></li>
+            <li><a href="producto.html">Productos</a></li>
+            <li><a href="ordenes.html" aria-current="page">Órdenes</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="mensajes.html">Mensajes</a></li>
+        </ul>
+        <div class="panel-pie">
+            <button class="boton accion-sesion">Iniciar sesión</button>
+        </div>
+    </nav>
+    <div class="fondo-oscuro" id="fondo-oscuro"></div>
+
+    <main>
+        <div class="contenedor">
+            <div class="cabecera-pagina cabecera-con-accion">
+                <div>
+                    <span class="etiqueta-seccion">Inventario</span>
+                    <h1>Órdenes</h1>
+                    <p class="subtitulo-pagina">Compras (mercancía que entra) y ventas (mercancía que sale).</p>
+                </div>
+                <button class="boton" id="boton-nueva-orden">+ Nueva orden</button>
+            </div>
+
+            <div class="barra-filtros">
+                <div class="chips" id="filtro-tipo" role="group" aria-label="Filtrar órdenes">
+                    <button class="chip" data-tipo="" aria-pressed="true">Todas</button>
+                    <button class="chip" data-tipo="Compra" aria-pressed="false">↓ Entradas (compras)</button>
+                    <button class="chip" data-tipo="Venta" aria-pressed="false">↑ Salidas (ventas)</button>
+                    <button class="chip" data-estado="En Proceso" aria-pressed="false">⟳ En proceso</button>
+                    <button class="chip" data-estado="Cancelada" aria-pressed="false">✘ Canceladas</button>
+                </div>
+                <span class="contador" id="contador-ordenes"></span>
+            </div>
+
+            <div class="lista-ordenes" id="lista-ordenes"></div>
+
+            <section class="seccion" id="seccion-movimientos">
+                <div class="seccion-cabecera">
+                    <div>
+                        <span class="etiqueta-seccion">Historial</span>
+                        <h2>Movimientos de inventario</h2>
+                    </div>
+                </div>
+                <div class="tabla-envoltura">
+                    <table class="tabla" id="tabla-movimientos">
+                        <thead>
+                            <tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Cantidad</th><th>Orden</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="pie-pagina">
+        <div class="contenedor">
+            <span>© 2026 Refaccionaria</span>
+            <a href="contacto.html">Contacto y soporte</a>
+        </div>
+    </footer>
+
+    <!-- Detalle de una orden -->
+    <dialog class="dialogo dialogo-ancho" id="dialogo-detalle">
+        <div class="dialogo-contenido">
+            <div class="dialogo-titulo">
+                <h2 id="detalle-titulo">Orden</h2>
+                <button class="panel-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+            </div>
+            <div id="detalle-cuerpo"></div>
+            <p class="mensaje-error" id="detalle-error"></p>
+            <div class="acciones-dialogo" id="detalle-acciones"></div>
+        </div>
+    </dialog>
+
+    <!-- Crear una orden nueva -->
+    <dialog class="dialogo dialogo-ancho" id="dialogo-nueva">
+        <form class="dialogo-contenido" id="form-orden" novalidate>
+            <div class="dialogo-titulo">
+                <h2>Nueva orden</h2>
+                <button type="button" class="panel-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+            </div>
+            <div class="campo">
+                <label for="orden-tipo">Tipo</label>
+                <select id="orden-tipo">
+                    <option value="Venta">Venta: la mercancía sale (baja el stock)</option>
+                    <option value="Compra">Compra: la mercancía entra (sube el stock)</option>
+                </select>
+            </div>
+            <div class="campo">
+                <label for="orden-observaciones">Observaciones</label>
+                <input type="text" id="orden-observaciones" maxlength="255" placeholder="Ej. Cliente de mostrador, proveedor…">
+            </div>
+            <div class="campo">
+                <span class="etiqueta-campo">Productos</span>
+                <div id="filas-productos"></div>
+                <button type="button" class="boton boton-borde boton-chico" id="agregar-fila">+ Agregar producto</button>
+            </div>
+            <p class="total-orden">Total: <strong id="orden-total">$0.00</strong></p>
+            <p class="mensaje-error" id="orden-error"></p>
+            <div class="acciones-dialogo">
+                <button type="button" class="boton boton-borde" data-cerrar>Cancelar</button>
+                <button type="submit" class="boton" id="guardar-orden">Guardar orden</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="script.js"></script>
+</body>
+</html>
