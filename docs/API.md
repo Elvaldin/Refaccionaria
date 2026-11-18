@@ -6,38 +6,60 @@ La documentación interactiva, donde se puede probar cada ruta, está en http://
 
 Los errores responden `{"detail": "mensaje"}`.
 
+## Sesión con token
+
+1. `POST /api/login` regresa un **token**.
+2. Las rutas que necesitan saber **quién** hace la petición lo piden en el encabezado:
+
+   ```
+   Authorization: Bearer <token>
+   ```
+
+3. El microservicio saca del token el `id_login` y revisa el **rol** en la base de datos. No se le cree a ningún `id_login` que venga en la URL o en el cuerpo: si se manda, se ignora.
+
+- El token está firmado con `TOKEN_SECRETO` (HMAC-SHA256), que comparten los 5 `.env`, y dura **8 horas**.
+- **401** si falta el token, si es falso, si está alterado o si ya venció.
+- **403** si el token es válido pero el rol no tiene permiso.
+- En `/docs`, las rutas con token tienen un campo `authorization`: ahí se escribe `Bearer ` seguido del token.
+
+En las tablas de abajo, 🔒 marca las rutas que piden token.
+
 ## Login · puerto 8000
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/api/login` | Revisa usuario y contraseña. Regresa el **rol** |
-| POST | `/api/usuarios` | Registrar usuario nuevo |
+| POST | `/api/login` | Revisa usuario y contraseña. Regresa el **token** y el **rol** |
+| POST | `/api/usuarios` | Registrar usuario nuevo. El token solo hace falta para crear personal (ver abajo) |
 
 ```json
 // POST /api/login
 { "username": "admin", "password": "Admin123" }
 
 // 200
-{ "message": "Login exitoso", "status": "success", "id_login": 2, "username": "admin", "rol": "Administrador" }
+{ "message": "Login exitoso", "status": "success", "token": "eyJpZCI6IDIsIC4uLn0.Xk3...", "id_login": 2, "username": "admin", "rol": "Administrador" }
 
 // 401
 { "detail": "Credenciales invalidas" }
 ```
 
+`id_login`, `username` y `rol` se regresan para que la página los muestre; los permisos salen del token.
+
 ```json
-// POST /api/usuarios: cualquiera se registra como Cliente
+// POST /api/usuarios: cualquiera se registra como Cliente (sin token)
 { "username": "juan", "email": "juan@correo.com", "password": "secreta1" }
 
-// POST /api/usuarios: el Administrador (id_creador) puede dar otro rol
-{ "username": "bodega", "email": "bodega@correo.com", "password": "secreta1", "rol": "Almacenista", "id_creador": 2 }
+// POST /api/usuarios: con el token del Administrador se puede dar otro rol
+// Authorization: Bearer <token del admin>
+{ "username": "bodega", "email": "bodega@correo.com", "password": "secreta1", "rol": "Almacenista" }
 
 // 201
 { "id_login": 7, "username": "bodega", "email": "bodega@correo.com", "rol": "Almacenista" }
 ```
 
 - Roles: `Administrador`, `Empleado`, `Almacenista`, `Cliente`.
-- **403** si alguien que no es Administrador intenta crear un usuario que no sea Cliente.
+- **403** si alguien sin token de Administrador intenta crear un usuario que no sea Cliente.
 - **409** si el usuario o el correo ya existen. **400** si la contraseña tiene menos de 6 caracteres o el usuario menos de 3 letras.
+- Para cambiar la contraseña de un usuario existente no hay ruta: se usa `Backend/Login/cambiar_contrasena.py` desde la terminal (pide 12 caracteres o más).
 
 
 ## Productos · puerto 8001
@@ -45,15 +67,15 @@ Los errores responden `{"detail": "mensaje"}`.
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/categorias` | Lista de categorías |
-| POST | `/api/categorias?id_login=2` | Crear categoría `{ "nombre", "descripcion" }` (409 si el nombre ya existe) |
-| DELETE | `/api/categorias/{id}?id_login=2` | Borrar categoría (409 si tiene productos) |
+| POST | `/api/categorias` 🔒 | Crear categoría `{ "nombre", "descripcion" }` (409 si el nombre ya existe) |
+| DELETE | `/api/categorias/{id}` 🔒 | Borrar categoría (409 si tiene productos) |
 | GET | `/api/productos` | Lista de productos. Filtros: `?categoria=1`, `?buscar=filtro` |
 | GET | `/api/productos/{id}` | Un producto (404 si no existe) |
-| POST | `/api/productos?id_login=2` | Crear producto `{ "nombre", "descripcion", "precio", "stock", "id_categoria", "imagen" }`. `imagen` es opcional: una ruta `img/productos/foto.jpg` (jpg, png o webp) o una dirección `https://` (422 si es otra cosa) |
-| PUT | `/api/productos/{id}?id_login=2` | Editar producto. El `stock` que se mande se ignora: solo cambia con las órdenes |
-| DELETE | `/api/productos/{id}?id_login=2` | Borrar (409 si ya está en una orden, promoción o movimiento de inventario) |
+| POST | `/api/productos` 🔒 | Crear producto `{ "nombre", "descripcion", "precio", "stock", "id_categoria", "imagen" }`. `imagen` es opcional: una ruta `img/productos/foto.jpg` (jpg, png o webp) o una dirección `https://` (422 si es otra cosa) |
+| PUT | `/api/productos/{id}` 🔒 | Editar producto. El `stock` que se mande se ignora: solo cambia con las órdenes |
+| DELETE | `/api/productos/{id}` 🔒 | Borrar (409 si ya está en una orden, promoción o movimiento de inventario) |
 
-- Las rutas que hacen cambios piden `?id_login=` y solo las puede usar el **Administrador** (**403** para los demás roles o si el usuario no existe, **422** si falta). Ver la lista es libre.
+- Las rutas que hacen cambios solo las puede usar el **Administrador** (**401** sin token, **403** para los demás roles). Ver la lista es libre.
 
 ## Promociones · puerto 8002
 
@@ -62,30 +84,32 @@ Los errores responden `{"detail": "mensaje"}`.
 | GET | `/api/dashboard` | Promociones **vigentes hoy**, con sus productos y precio con descuento |
 | GET | `/api/promociones` | Todas. `?vigentes=true` para solo las vigentes |
 | GET | `/api/promociones/{id}` | Una promoción |
-| POST | `/api/promociones?id_login=2` | Crear `{ "nombre", "descuento", "fecha_inicio", "fecha_fin", "activa", "productos": [1, 2] }` |
-| PUT | `/api/promociones/{id}?id_login=2` | Editar. Si trae `"productos": [...]`, esos quedan como sus productos; si no, no se tocan |
-| DELETE | `/api/promociones/{id}?id_login=2` | Borrar (también quita sus productos) |
-| POST | `/api/promociones/{id}/productos?id_login=2` | Agregar producto `{ "id_producto": 1 }` (409 si ya estaba) |
-| DELETE | `/api/promociones/{id}/productos/{id_producto}?id_login=2` | Quitar producto |
+| POST | `/api/promociones` 🔒 | Crear `{ "nombre", "descuento", "fecha_inicio", "fecha_fin", "activa", "productos": [1, 2] }` |
+| PUT | `/api/promociones/{id}` 🔒 | Editar. Si trae `"productos": [...]`, esos quedan como sus productos; si no, no se tocan |
+| DELETE | `/api/promociones/{id}` 🔒 | Borrar (también quita sus productos) |
+| POST | `/api/promociones/{id}/productos` 🔒 | Agregar producto `{ "id_producto": 1 }` (409 si ya estaba) |
+| DELETE | `/api/promociones/{id}/productos/{id_producto}` 🔒 | Quitar producto |
 
-- Igual que en Productos: los cambios solo los hace el **Administrador** (**403** para los demás).
+- Igual que en Productos: los cambios solo los hace el **Administrador** (**401** sin token, **403** para los demás).
 
 Las fechas van en formato `2026-10-01T00:00:00`. Una promoción nueva no puede empezar en un día que ya pasó (400); al editar una que ya empezó, su fecha de inicio se puede dejar igual pero no moverse a otro día pasado.
 
 ## Órdenes · puerto 8003
 
+Todas las rutas de Órdenes piden token.
+
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/ordenes` | Lista con su detalle y total. **Obligatorio** `?id_login=4` (quién consulta; un Cliente solo recibe las suyas). Filtros: `?tipo=Compra`, `?tipo=Venta`, `?estado=Cancelada` |
-| GET | `/api/ordenes/{id}` | Una orden con sus productos. **Obligatorio** `?id_login=4` (quién consulta) |
-| POST | `/api/ordenes` | Crear orden (queda **Pendiente**) |
-| PATCH | `/api/ordenes/{id}/estado` | Cambiar estado `{ "estado": "Completada", "id_login": 2 }` |
-| GET | `/api/inventario/movimientos` | Entradas y salidas de stock. **Obligatorio** `?id_login=2` (un Cliente recibe 403). Filtro: `?id_producto=1` |
+| GET | `/api/ordenes` 🔒 | Lista con su detalle y total. Un Cliente solo recibe las suyas. Filtros: `?tipo=Compra`, `?tipo=Venta`, `?estado=Cancelada` |
+| GET | `/api/ordenes/{id}` 🔒 | Una orden con sus productos (403 si un Cliente pide una ajena) |
+| POST | `/api/ordenes` 🔒 | Crear orden (queda **Pendiente**) a nombre de quien tiene la sesión |
+| PATCH | `/api/ordenes/{id}/estado` 🔒 | Cambiar estado `{ "estado": "Completada" }` |
+| GET | `/api/inventario/movimientos` 🔒 | Entradas y salidas de stock (un Cliente recibe 403). Filtro: `?id_producto=1` |
 
 ```json
 // POST /api/ordenes
+// Authorization: Bearer <token>
 {
-  "id_login": 1,
   "tipo": "Venta",
   "observaciones": "Cliente de mostrador",
   "productos": [
@@ -100,7 +124,7 @@ Las fechas van en formato `2026-10-01T00:00:00`. Una promoción nueva no puede e
 - Al pasar a **Completada** se mueve el stock. Si una venta no tiene stock suficiente responde **409** con el detalle.
 - Estados: `Pendiente → En Proceso → Completada`, o `Cancelada` desde los dos primeros.
 
-- `id_login` dice **quién** hace la petición, y de su rol dependen los permisos (**403** si no tiene permiso):
+Los permisos dependen del rol de quien tiene la sesión (**403** si no tiene permiso):
 
 | | Administrador | Empleado | Almacenista | Cliente |
 |---|---|---|---|---|
@@ -118,24 +142,27 @@ Las fechas van en formato `2026-10-01T00:00:00`. Una promoción nueva no puede e
 |---|---|---|
 | GET | `/api/soporte` | Datos de contacto de la tienda |
 | GET | `/api/soporte/{id}` | Un contacto |
-| POST | `/api/soporte` | Crear `{ "correo", "telefono", "direccion", "horario" }`. Debe traer correo, teléfono o dirección. Solo Administrador: `?id_login=1` |
-| PUT | `/api/soporte/{id}` | Editar. Solo Administrador: `?id_login=1` |
-| DELETE | `/api/soporte/{id}` | Borrar. Solo Administrador: `?id_login=1` |
+| POST | `/api/soporte` 🔒 | Crear `{ "correo", "telefono", "direccion", "horario" }`. Debe traer correo, teléfono o dirección. Solo Administrador |
+| PUT | `/api/soporte/{id}` 🔒 | Editar. Solo Administrador |
+| DELETE | `/api/soporte/{id}` 🔒 | Borrar. Solo Administrador |
 
 ### Chat de soporte (mismo microservicio, puerto 8004)
 
+Todas las rutas del chat piden token.
+
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/conversaciones?id_login=4` | Lista con el último mensaje. El Cliente recibe solo las suyas; el personal, todas |
-| GET | `/api/conversaciones/{id}?id_login=4` | Una conversación con todos sus mensajes |
-| POST | `/api/conversaciones` | Empezar una conversación (solo el Cliente) |
-| POST | `/api/conversaciones/{id}/mensajes` | Contestar `{ "id_login": 2, "texto": "..." }`. Regresa la conversación completa |
-| PATCH | `/api/conversaciones/{id}/estado` | Cerrar o reabrir `{ "id_login": 2, "estado": "Cerrada" }` (solo el personal) |
-| DELETE | `/api/conversaciones/{id}?id_login=2` | Eliminar con todos sus mensajes (solo el Administrador) |
+| GET | `/api/conversaciones` 🔒 | Lista con el último mensaje. El Cliente recibe solo las suyas; el personal, todas |
+| GET | `/api/conversaciones/{id}` 🔒 | Una conversación con todos sus mensajes |
+| POST | `/api/conversaciones` 🔒 | Empezar una conversación (solo el Cliente) |
+| POST | `/api/conversaciones/{id}/mensajes` 🔒 | Contestar `{ "texto": "..." }`. Regresa la conversación completa |
+| PATCH | `/api/conversaciones/{id}/estado` 🔒 | Cerrar o reabrir `{ "estado": "Cerrada" }` (solo el personal) |
+| DELETE | `/api/conversaciones/{id}` 🔒 | Eliminar con todos sus mensajes (solo el Administrador) |
 
 ```json
 // POST /api/conversaciones
-{ "id_login": 4, "asunto": "Garantía", "mensaje": "Mi batería ya no carga" }
+// Authorization: Bearer <token del cliente>
+{ "asunto": "Garantía", "mensaje": "Mi batería ya no carga" }
 
 // 201
 {
@@ -146,6 +173,7 @@ Las fechas van en formato `2026-10-01T00:00:00`. Una promoción nueva no puede e
 }
 ```
 
+- En las respuestas, `id_login` dice de quién es la conversación o el mensaje (sale de la base de datos, no de la petición).
 - `esperando_respuesta` es `true` cuando el último mensaje es del cliente, o sea, le toca contestar al personal.
 - **403** si el rol no tiene permiso (por ejemplo, el Almacenista, o un Cliente que abre una conversación ajena). **409** si se escribe en una conversación cerrada. **400** si el mensaje está vacío.
 
@@ -156,3 +184,5 @@ Las fechas van en formato `2026-10-01T00:00:00`. Una promoción nueva no puede e
 | `/` | Lista de todas las APIs con su dirección completa y si cada microservicio está encendido |
 | `/docs` | Swagger con un menú para elegir el microservicio |
 | `/openapi/{servicio}.json` | Descripción OpenAPI de cada microservicio (`login`, `productos`, `promociones`, `ordenes`, `soporte`) |
+
+El Gateway deja pasar el encabezado `Authorization` (CORS) para que la página pueda mandar el token.
