@@ -1,0 +1,142 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+// Límite de intentos de inicio de sesión: frena a quien prueba muchas
+// contraseñas. Solo cuenta los intentos FALLIDOS (401) en 15 minutos:
+//   - 5 con el mismo usuario desde la misma IP
+//   - 20 desde la misma IP, sin importar el usuario
+//
+// Al pasarse, responde 429 hasta que terminen esos 15 minutos.
+// Entrar bien borra los fallos de ese usuario desde esa IP.
+const (
+	ventanaLogin  = 15 * time.Minute
+	maxPorUsuario = 5
+	maxPorIP      = 20
+)
+
+type intentos struct {
+	fallos int
+	desde  time.Time // cuándo empezó a contar
+}
+
+type limitador struct {
+	mu        sync.Mutex
+	registros map[string]*intentos
+}
+
+// espera regresa cuánto falta para que esa clave pueda volver a intentar (0 = puede ya)
+func (l *limitador) espera(clave string, maximo int, ahora time.Time) time.Duration {
+	r, ok := l.registros[clave]
+	if !ok || ahora.Sub(r.desde) > ventanaLogin || r.fallos < maximo {
+		return 0
+	}
+	return ventanaLogin - ahora.Sub(r.desde)
+}
+
+func (l *limitador) sumarFallo(clave string, ahora time.Time) {
+	r, ok := l.registros[clave]
+	if !ok || ahora.Sub(r.desde) > ventanaLogin {
+		l.registros[clave] = &intentos{fallos: 1, desde: ahora}
+		return
+	}
+	r.fallos++
+}
+
+// limpiar borra lo que ya venció, para que el mapa no crezca sin fin
+func (l *limitador) limpiar(ahora time.Time) {
+	for clave, r := range l.registros {
+		if ahora.Sub(r.desde) > ventanaLogin {
+			delete(l.registros, clave)
+		}
+	}
+}
+
+// grabadorEstado deja pasar la respuesta y apunta qué código regresó Python
+type grabadorEstado struct {
+	http.ResponseWriter
+	estado int
+}
+
+func (g *grabadorEstado) WriteHeader(codigo int) {
+	g.estado = codigo
+	g.ResponseWriter.WriteHeader(codigo)
+}
+
+func ipDe(r *http.Request) string {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
+
+func limitarLogin(siguiente http.Handler) http.Handler {
+	l := &limitador{registros: map[string]*intentos{}}
+	go func() {
+		for range time.Tick(5 * time.Minute) {
+			l.mu.Lock()
+			l.limpiar(time.Now())
+			l.mu.Unlock()
+		}
+	}()
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/login" {
+			siguiente.ServeHTTP(w, r)
+			return
+		}
+
+		// Se lee el usuario del cuerpo y se vuelve a dejar el cuerpo como estaba para Python
+		cuerpo, err := io.ReadAll(r.Body)
+		if err != nil {
+			responderJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"detail": "La petición es demasiado grande."})
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(cuerpo))
+		var datos struct {
+			Username string `json:"username"`
+		}
+		json.Unmarshal(cuerpo, &datos) // si no es JSON válido, Python contesta 422
+
+		ip := ipDe(r)
+		claveUsuario := ip + "|" + strings.ToLower(strings.TrimSpace(datos.Username))
+		ahora := time.Now()
+
+		l.mu.Lock()
+		falta := max(l.espera(claveUsuario, maxPorUsuario, ahora), l.espera(ip, maxPorIP, ahora))
+		l.mu.Unlock()
+		if falta > 0 {
+			minutos := int(falta.Minutes()) + 1
+			w.Header().Set("Retry-After", strconv.Itoa(int(falta.Seconds())+1))
+			responderJSON(w, http.StatusTooManyRequests, map[string]string{
+				"detail": fmt.Sprintf("Demasiados intentos fallidos. Espera %d minutos y vuelve a intentar.", minutos),
+			})
+			return
+		}
+
+		grabador := &grabadorEstado{ResponseWriter: w, estado: http.StatusOK}
+		siguiente.ServeHTTP(grabador, r)
+
+		l.mu.Lock()
+		switch grabador.estado {
+		case http.StatusUnauthorized:
+			l.sumarFallo(claveUsuario, ahora)
+			l.sumarFallo(ip, ahora)
+		case http.StatusOK:
+			delete(l.registros, claveUsuario)
+		}
+		l.mu.Unlock()
+	})
+}

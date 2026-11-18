@@ -179,6 +179,13 @@ En la base de datos del servidor (no en tu computadora):
    cd Backend/Login && ../../.venv/bin/python cambiar_contrasena.py admin
    ```
 5. Crea las cuentas reales del personal desde la página, entrando como admin (**Registrar usuario**).
+6. Arranca el Gateway con `ENTORNO=produccion`: así no publica `/`, `/docs` ni `/openapi/...`, que muestran direcciones y puertos internos.
+
+**Protecciones del Gateway** (`Backend-Go/gateway`):
+
+- **Intentos de login:** después de 5 contraseñas equivocadas con el mismo usuario desde la misma IP (o 20 con cualquier usuario), responde **429** durante 15 minutos. Entrar bien borra los fallos de ese usuario. Los contadores viven en memoria: reiniciar el Gateway los borra.
+- **Tamaño:** rechaza peticiones de más de 1 MB (**413**).
+- **Tiempos de espera:** corta las conexiones que no terminan de mandar su petición y deja de esperar a un microservicio trabado después de 20 segundos (**502**).
 
 ## Pruebas automáticas
 
