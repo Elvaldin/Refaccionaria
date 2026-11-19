@@ -466,7 +466,7 @@ if (dialogoRegistro) {
         const revisiones = [
             marcarError(regUsuario, nombre.length < 3 || nombre.includes(" ") ? "Mínimo 3 letras y sin espacios" : ""),
             marcarError(regCorreo, /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo) ? "" : "Escribe un correo válido"),
-            marcarError(regContrasena, regContrasena.value.length < 6 ? "Mínimo 6 caracteres" : ""),
+            marcarError(regContrasena, regContrasena.value.length < 10 ? "Mínimo 10 caracteres" : ""),
             marcarError(regConfirmar, regConfirmar.value !== regContrasena.value ? "Las contraseñas no coinciden" : ""),
         ];
         if (revisiones.includes(false)) return;

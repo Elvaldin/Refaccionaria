@@ -329,7 +329,7 @@ class PruebaRegistro(unittest.TestCase):
     """Solo prueba los casos que se rechazan, para no dejar usuarios de prueba en la base."""
 
     def test_sin_ser_administrador_no_se_crea_personal(self):
-        nuevo = {"username": "intruso", "email": "intruso@prueba.com", "password": "secreta1", "rol": "Administrador"}
+        nuevo = {"username": "intruso", "email": "intruso@prueba.com", "password": "secreta123", "rol": "Administrador"}
         codigo, respuesta = pedir("POST", "/api/usuarios", nuevo)
         self.assertEqual(codigo, 403)
         self.assertIn("Administrador", respuesta["detail"])
@@ -338,10 +338,10 @@ class PruebaRegistro(unittest.TestCase):
         self.assertEqual(pedir("POST", "/api/usuarios", {**nuevo, "id_creador": sesion("admin")["id_login"]})[0], 403)
 
     def test_usuario_repetido_y_datos_invalidos(self):
-        self.assertEqual(pedir("POST", "/api/usuarios", {"username": "admin", "email": "otro@prueba.com", "password": "secreta1"})[0], 409)
-        self.assertEqual(pedir("POST", "/api/usuarios", {"username": "nuevo", "email": "no-es-correo", "password": "secreta1"})[0], 422)
+        self.assertEqual(pedir("POST", "/api/usuarios", {"username": "admin", "email": "otro@prueba.com", "password": "secreta123"})[0], 409)
+        self.assertEqual(pedir("POST", "/api/usuarios", {"username": "nuevo", "email": "no-es-correo", "password": "secreta123"})[0], 422)
         self.assertEqual(pedir("POST", "/api/usuarios", {"username": "nuevo", "email": "n@prueba.com", "password": "123"})[0], 400)
-        self.assertEqual(pedir("POST", "/api/usuarios", {"username": "nuevo", "email": "n@prueba.com", "password": "secreta1", "rol": "Jefe"})[0], 422)
+        self.assertEqual(pedir("POST", "/api/usuarios", {"username": "nuevo", "email": "n@prueba.com", "password": "secreta123", "rol": "Jefe"})[0], 422)
 
 
 class PruebaSoporte(unittest.TestCase):

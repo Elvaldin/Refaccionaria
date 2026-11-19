@@ -46,11 +46,11 @@ En las tablas de abajo, 🔒 marca las rutas que piden token.
 
 ```json
 // POST /api/usuarios: cualquiera se registra como Cliente (sin token)
-{ "username": "juan", "email": "juan@correo.com", "password": "secreta1" }
+{ "username": "juan", "email": "juan@correo.com", "password": "secreta123" }
 
 // POST /api/usuarios: con el token del Administrador se puede dar otro rol
 // Authorization: Bearer <token del admin>
-{ "username": "bodega", "email": "bodega@correo.com", "password": "secreta1", "rol": "Almacenista" }
+{ "username": "bodega", "email": "bodega@correo.com", "password": "secreta123", "rol": "Almacenista" }
 
 // 201
 { "id_login": 7, "username": "bodega", "email": "bodega@correo.com", "rol": "Almacenista" }
@@ -58,7 +58,7 @@ En las tablas de abajo, 🔒 marca las rutas que piden token.
 
 - Roles: `Administrador`, `Empleado`, `Almacenista`, `Cliente`.
 - **403** si alguien sin token de Administrador intenta crear un usuario que no sea Cliente.
-- **409** si el usuario o el correo ya existen. **400** si la contraseña tiene menos de 6 caracteres o el usuario menos de 3 letras.
+- **409** si el usuario o el correo ya existen. **400** si la contraseña tiene menos de 10 caracteres o el usuario menos de 3 letras.
 - Para cambiar la contraseña de un usuario existente no hay ruta: se usa `Backend/Login/cambiar_contrasena.py` desde la terminal (pide 12 caracteres o más).
 
 

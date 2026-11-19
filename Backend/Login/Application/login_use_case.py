@@ -8,6 +8,8 @@ from Domain.entities import User, ROLES, ROL_CLIENTE
 from abc import ABC, abstractmethod
 from typing import Optional
 
+# Largo mínimo de la contraseña al registrarse
+MINIMO_CONTRASENA = 10
 
 class DatosInvalidosError(Exception):
     pass
@@ -91,8 +93,11 @@ class RegisterUser:
         email = email.strip().lower()
         if len(username) < 3 or " " in username:
             raise DatosInvalidosError("El usuario debe tener al menos 3 letras y no llevar espacios")
-        if len(password) < 6:
-            raise DatosInvalidosError("La contraseña debe tener al menos 6 caracteres")
+        if len(password) < MINIMO_CONTRASENA:
+            raise DatosInvalidosError(f"La contraseña debe tener al menos {MINIMO_CONTRASENA} caracteres")
+        if len(password.encode("utf-8")) > 72:
+            # bcrypt solo toma en cuenta los primeros 72 bytes
+            raise DatosInvalidosError("La contraseña es demasiado larga (máximo 72 caracteres)")
         if rol not in ROLES:
             raise DatosInvalidosError(f"El rol '{rol}' no existe")
 

@@ -88,39 +88,43 @@ class PruebasLogin(unittest.TestCase):
 
     # ----- Registrar usuario -----
     def test_cualquiera_se_registra_como_cliente_y_luego_puede_entrar(self):
-        nuevo = self.registro.execute("juan", "Juan@Correo.com", "secreta1")
+        nuevo = self.registro.execute("juan", "Juan@Correo.com", "secreta123")
         self.assertEqual((nuevo.rol, nuevo.email), ("Cliente", "juan@correo.com"))
         self.assertIsNotNone(nuevo.id)
-        self.assertEqual(self.repo.usuarios["juan"].password_hash, "1aterces")   # se guarda el hash
-        self.assertEqual(self.login.execute("juan", "secreta1").id, nuevo.id)
+        self.assertEqual(self.repo.usuarios["juan"].password_hash, "321aterces")   # se guarda el hash
+        self.assertEqual(self.login.execute("juan", "secreta123").id, nuevo.id)
 
     def test_sin_ser_administrador_no_se_puede_crear_personal(self):
         for rol in ("Administrador", "Empleado", "Almacenista"):
             with self.assertRaises(PermisoDenegadoError):
-                self.registro.execute("intruso", "intruso@r.com", "secreta1", rol)            # sin sesión
+                self.registro.execute("intruso", "intruso@r.com", "secreta123", rol)            # sin sesión
             with self.assertRaises(PermisoDenegadoError):
-                self.registro.execute("intruso", "intruso@r.com", "secreta1", rol, id_creador=2)   # Empleado
+                self.registro.execute("intruso", "intruso@r.com", "secreta123", rol, id_creador=2)   # Empleado
         self.assertNotIn("intruso", self.repo.usuarios)
 
     def test_el_administrador_crea_usuarios_de_cualquier_rol(self):
-        nuevo = self.registro.execute("bodega", "bodega@r.com", "secreta1", "Almacenista", id_creador=1)
+        nuevo = self.registro.execute("bodega", "bodega@r.com", "secreta123", "Almacenista", id_creador=1)
         self.assertEqual(nuevo.rol, "Almacenista")
 
     def test_no_se_repiten_usuario_ni_correo(self):
         with self.assertRaises(ConflictoError):
-            self.registro.execute("cliente", "otro@r.com", "secreta1")
+            self.registro.execute("cliente", "otro@r.com", "secreta123")
         with self.assertRaises(ConflictoError):
-            self.registro.execute("otro", "CLIENTE@r.com", "secreta1")
+            self.registro.execute("otro", "CLIENTE@r.com", "secreta123")
 
     def test_datos_invalidos(self):
         with self.assertRaises(DatosInvalidosError):
-            self.registro.execute("ab", "ab@r.com", "secreta1")          # usuario muy corto
+            self.registro.execute("ab", "ab@r.com", "secreta123")          # usuario muy corto
         with self.assertRaises(DatosInvalidosError):
-            self.registro.execute("con espacio", "e@r.com", "secreta1")  # usuario con espacio
+            self.registro.execute("con espacio", "e@r.com", "secreta123")  # usuario con espacio
         with self.assertRaises(DatosInvalidosError):
             self.registro.execute("pedro", "pedro@r.com", "123")         # contraseña corta
         with self.assertRaises(DatosInvalidosError):
-            self.registro.execute("pedro", "pedro@r.com", "secreta1", "Jefe", id_creador=1)
+            self.registro.execute("Pedro", "pedro@r.com", "secreta12")  # 9 caracteres: falta 1
+        with self.assertRaises(DatosInvalidosError):
+            self.registro.execute("pedro", "pedro@r.com", "x" * 73)      # bcrypt solo usa 72 bytes
+        with self.assertRaises(DatosInvalidosError):
+            self.registro.execute("pedro", "pedro@r.com", "secreta123", "Jefe", id_creador=1)
 
     # ----- Cambiar contraseña -----
     def test_cambiar_contrasena_y_entrar_con_la_nueva(self):
