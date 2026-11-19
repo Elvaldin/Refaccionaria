@@ -180,11 +180,12 @@ En la base de datos del servidor (no en tu computadora):
    cd Backend/Login && ../../.venv/bin/python cambiar_contrasena.py admin
    ```
 5. Crea las cuentas reales del personal desde la página, entrando como admin (**Registrar usuario**).
-6. Arranca el Gateway con `ENTORNO=produccion`: así no publica `/`, `/docs` ni `/openapi/...`, que muestran direcciones y puertos internos.
+6. Arranca el Gateway con `ENTORNO=produccion`: así no publica `/gateway`, `/docs` ni `/openapi/...`, que muestran direcciones y puertos internos. La página web (`/`) sí se publica.
 
 **Protecciones del Gateway** (`Backend-Go/gateway`):
 
-- **Intentos de login:** después de 5 contraseñas equivocadas con el mismo usuario desde la misma IP (o 20 con cualquier usuario), responde **429** durante 15 minutos. Entrar bien borra los fallos de ese usuario. Los contadores viven en memoria: reiniciar el Gateway los borra.
+- **Intentos de login:** después de 5 contraseñas equivocadas con el mismo usuario desde la misma IP (o 20 con cualquier usuario), responde **429** durante 15 minutos. Entrar bien borra los fallos de ese usuario. Los contadores viven en memoria: reiniciar el Gateway los borra, y si hay varias copias del Gateway cada una cuenta por su lado.
+- **IP real detrás de Google Cloud:** ahí todas las conexiones llegan desde Google y la IP del visitante viene en el encabezado `X-Forwarded-For`. Con `PROXIES_DE_CONFIANZA` se le dice al Gateway cuántas direcciones agrega Google al final de ese encabezado: `1` en Cloud Run directo, `2` con un balanceador de carga delante. Sin la variable (`0`, en tu computadora y en Docker) se usa la IP de la conexión y no se le cree a `X-Forwarded-For`, porque cualquiera lo puede escribir. Con IPv6 se cuenta por bloque `/64`.
 - **Tamaño:** rechaza peticiones de más de 1 MB (**413**).
 - **Tiempos de espera:** corta las conexiones que no terminan de mandar su petición y deja de esperar a un microservicio trabado después de 20 segundos (**502**).
 
@@ -216,12 +217,14 @@ Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cad
 | Qué prueba | Cuántas | ¿Necesita la base de datos? |
 |---|---|---|
 | **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña | 98 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
+| **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6) y que un atacante no bloquee a los demás | 8 | No |
 | **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 37 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
 
 También se pueden correr por separado:
 
 ```bash
 cd Backend/Ordenes && ../../.venv/bin/python -m unittest discover -s tests -t . -v
+cd Backend-Go/gateway && go test -v ./...
 .venv/bin/python pruebas/prueba_api.py -v
 ```
 

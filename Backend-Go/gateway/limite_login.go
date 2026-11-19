@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,12 +75,62 @@ func (g *grabadorEstado) WriteHeader(codigo int) {
 	g.ResponseWriter.WriteHeader(codigo)
 }
 
-func ipDe(r *http.Request) string {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+// proxiesDeConfianza: cuántas direcciones agrega NUESTRA infraestructura al final
+// del encabezado X-Forwarded-For (variable PROXIES_DE_CONFIANZA).
+//   - 0 (en tu computadora y en Docker): no hay proxy; se usa la IP de la conexión.
+//   - Detrás de Google Cloud Run o de un balanceador, la conexión siempre viene
+//     de Google (la misma IP para todos) y la IP real del visitante va en
+//     X-Forwarded-For. Lo que el visitante escriba en ese encabezado queda a la
+//     izquierda, por eso se cuenta desde la derecha y no se le cree al primero.
+var proxiesDeConfianza = 0
+
+// leerProxiesDeConfianza lee PROXIES_DE_CONFIANZA (vacía = 0)
+func leerProxiesDeConfianza() (int, error) {
+	texto := strings.TrimSpace(os.Getenv("PROXIES_DE_CONFIANZA"))
+	if texto == "" {
+		return 0, nil
 	}
-	return ip
+	n, err := strconv.Atoi(texto)
+	if err != nil || n < 0 || n > 5 {
+		return 0, fmt.Errorf("PROXIES_DE_CONFIANZA debe ser un número de 0 a 5 (llegó %q)", texto)
+	}
+	return n, nil
+}
+
+// ipDe regresa la IP de quien hace la petición, la que se usa para contar intentos
+func ipDe(r *http.Request) string {
+	if proxiesDeConfianza > 0 {
+		var direcciones []string
+		for _, encabezado := range r.Header.Values("X-Forwarded-For") {
+			for _, parte := range strings.Split(encabezado, ",") {
+				direcciones = append(direcciones, strings.TrimSpace(parte))
+			}
+		}
+		// La que puso el primer proxy nuestro: la N-ésima contando desde la derecha
+		if i := len(direcciones) - proxiesDeConfianza; i >= 0 {
+			if ip := net.ParseIP(direcciones[i]); ip != nil {
+				return agruparIP(ip)
+			}
+		}
+		// Si no viene bien, se usa la de la conexión (es mejor que nada)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return agruparIP(ip)
+	}
+	return host
+}
+
+// agruparIP: con IPv6 cada casa recibe millones de direcciones (un bloque /64),
+// así que se cuenta por bloque; si no, bastaría cambiar de dirección para seguir probando
+func agruparIP(ip net.IP) string {
+	if ip.To4() != nil {
+		return ip.To4().String()
+	}
+	return ip.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
 
 func limitarLogin(siguiente http.Handler) http.Handler {

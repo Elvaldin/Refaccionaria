@@ -1,6 +1,6 @@
 #!/bin/bash
 # Corre todas las pruebas automáticas de la Refaccionaria.
-#   1) Casos de uso de los 5 microservicios (no necesitan base de datos)
+#   1) Casos de uso de los 5 microservicios y pruebas del Gateway (no necesitan base de datos)
 #   2) APIs de punta a punta por el Gateway (necesita ./iniciar.sh corriendo)
 cd "$(dirname "$0")"
 
@@ -21,6 +21,13 @@ for s in Login Productos Promociones Ordenes Soporte; do
         echo "❌"; echo "$salida"; fallas=1
     fi
 done
+
+printf "%-12s " "Gateway:"
+if salida=$(cd Backend-Go/gateway && go test ./... 2>&1); then
+    echo "go test  ✅"
+else
+    echo "❌"; echo "$salida"; fallas=1
+fi
 
 echo
 echo "===== 2) APIs por el Gateway ====="

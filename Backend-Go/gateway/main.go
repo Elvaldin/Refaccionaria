@@ -10,6 +10,10 @@ import (
 
 func main() {
 	usarURLsDelEntorno()
+	var err error
+	if proxiesDeConfianza, err = leerProxiesDeConfianza(); err != nil {
+		log.Fatal(err)
+	}
 	rutas := http.NewServeMux()
 
 	// Cada ruta de la tabla se conecta con su microservicio de Python.
@@ -74,6 +78,11 @@ func main() {
 		log.Printf("Gateway (Go) corriendo en http://%s/ (modo producción: sin /gateway ni /docs)", direccion)
 	} else {
 		log.Printf("Gateway (Go) corriendo en http://%s/", direccion)
+	}
+	if proxiesDeConfianza > 0 {
+		log.Printf("Límite de login: IP del visitante = la %d.ª de X-Forwarded-For contando desde la derecha", proxiesDeConfianza)
+	} else {
+		log.Printf("Límite de login: IP de la conexión (sin proxy delante)")
 	}
 	log.Fatal(servidor.ListenAndServe())
 }
