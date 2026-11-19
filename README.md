@@ -140,7 +140,7 @@ Después abre cada `.env` y llena:
 ./iniciar.sh
 ```
 
-Arranca los 5 microservicios y el Gateway. Para apagarlos todos, presiona **Ctrl+C**. Después abre `Frontend/index.html` en el navegador.
+Arranca los 5 microservicios y el Gateway. Para apagarlos todos, presiona **Ctrl+C**. Después abre http://127.0.0.1:8080/ en el navegador.
 
 Antes de arrancar, el script:
 
@@ -150,7 +150,8 @@ Antes de arrancar, el script:
 
 | Dirección | Qué hay |
 |---|---|
-| http://127.0.0.1:8080/ | Gateway: lista de todas las APIs y si cada microservicio está encendido |
+| http://127.0.0.1:8080/ | La página de la Refaccionaria (la entrega el Gateway) |
+| http://127.0.0.1:8080/gateway | Gateway: lista de todas las APIs y si cada microservicio está encendido |
 | http://127.0.0.1:8080/docs | Documentación interactiva (Swagger) de las 5 APIs |
 | http://127.0.0.1:8000/docs … 8004/docs | Documentación de cada microservicio por separado |
 
@@ -200,7 +201,7 @@ Apaga antes `./iniciar.sh`, porque los dos usan el puerto 8080. Para apagar los 
 | Archivo | Qué hace |
 |---|---|
 | `Backend/Dockerfile` | Una sola receta para los 5 microservicios de Python (`--build-arg SERVICIO=Login`, `Productos`…). Instala el conector de SQL Server de Microsoft (ODBC Driver 18, acepta su licencia) y pone la hora de México (`TZ=America/Mexico_City`) |
-| `Backend-Go/gateway/Dockerfile` | Compila el Gateway y lo deja en una imagen mínima de ~16 MB, sin shell y sin permisos de administrador |
+| `Backend-Go/gateway/Dockerfile` | Compila el Gateway y lo deja, junto con la página web (`Frontend/`), en una imagen mínima de ~19 MB, sin shell y sin permisos de administrador. Se construye desde la carpeta principal del proyecto |
 | `docker-compose.yml` | Levanta los 6 contenedores. Solo el Gateway se abre a tu Mac (en `127.0.0.1:8080`) |
 | `.dockerignore` | Evita que los `.env`, las pruebas y `__pycache__` entren a las imágenes |
 

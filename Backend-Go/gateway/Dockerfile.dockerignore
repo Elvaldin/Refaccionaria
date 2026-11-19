@@ -1,0 +1,7 @@
+# Docker usa este archivo (y no .dockerignore) porque se llama igual que el
+# Dockerfile. Solo entran los .go, go.mod y la página web.
+*
+!Backend-Go/gateway/go.mod
+!Backend-Go/gateway/*.go
+!Frontend/
+**/.DS_Store

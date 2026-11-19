@@ -1,7 +1,9 @@
 // ===== Conexión con el Gateway en Go =====
 // La página le pide los datos al Gateway (Go, puerto 8080)
 // y el Gateway se los pide a los microservicios de Python.
-const API = "http://127.0.0.1:8080/api";
+// Publicada (o abierta desde el Gateway) usa "/api" de la misma dirección.
+// Abierta como archivo (doble clic en index.html) sigue usando el Gateway de tu computadora.
+const API = location.protocol === "file:" ? "http://127.0.0.1:8080/api" : "/api";
 const SIN_CONEXION = "Revisa que esté corriendo iniciar.sh (los microservicios de Python y el Gateway en Go).";
 
 // Aquí se guardan los datos que llegan de la base de datos

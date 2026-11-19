@@ -43,7 +43,7 @@ services:
     env_file: Backend/Soporte/.env
 
   gateway:
-    build: ./Backend-Go/gateway
+    build: { context: ., dockerfile: Backend-Go/gateway/Dockerfile }
     restart: unless-stopped
     environment:
       URL_LOGIN: http://login:8080

@@ -135,7 +135,7 @@ done <<< "$SERVICIOS"
 
 echo
 if [ $todos_bien -eq 1 ]; then
-    echo "Todo listo. Abre Frontend/index.html en el navegador. Para apagar todo: Ctrl+C"
+    echo "Todo listo. Abre http://127.0.0.1:8080/ en el navegador. Para apagar todo: Ctrl+C"
 else
     echo "Algún servicio no arrancó. Para apagar todo: Ctrl+C"
 fi

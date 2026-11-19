@@ -1,4 +1,0 @@
-# Solo hacen falta go.mod y los .go
-*
-!go.mod
-!*.go

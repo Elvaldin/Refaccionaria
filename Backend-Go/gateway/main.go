@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -22,12 +23,21 @@ func main() {
 		}
 	}
 
-	// Las páginas de ayuda ("/" y "/docs") muestran direcciones y puertos internos:
+	// La página web (Frontend) se entrega desde aquí mismo, en "/".
+	// Las rutas /api/... de arriba tienen prioridad porque son más específicas.
+	carpeta := carpetaFrontend()
+	if _, err := os.Stat(filepath.Join(carpeta, "index.html")); err != nil {
+		log.Fatalf("No encuentro la página web en %s (usa FRONTEND=<carpeta del Frontend>): %v", carpeta, err)
+	}
+	rutas.Handle("/", paginaWeb(carpeta))
+	rutas.HandleFunc("/api/", apiNoExiste)
+
+	// Las páginas de ayuda ("/gateway" y "/docs") muestran direcciones y puertos internos:
 	// sirven para desarrollar y para la demo, pero en producción no se publican.
 	// Para apagarlas: ENTORNO=produccion
 	produccion := os.Getenv("ENTORNO") == "produccion"
 	if !produccion {
-		rutas.HandleFunc("GET /{$}", inicio)
+		rutas.HandleFunc("GET /gateway", inicio)
 		rutas.HandleFunc("GET /docs", documentacion)
 		rutas.HandleFunc("GET /openapi/{archivo}", especificacion)
 	}
@@ -61,7 +71,7 @@ func main() {
 	}
 
 	if produccion {
-		log.Printf("Gateway (Go) corriendo en http://%s/ (modo producción: sin / ni /docs)", direccion)
+		log.Printf("Gateway (Go) corriendo en http://%s/ (modo producción: sin /gateway ni /docs)", direccion)
 	} else {
 		log.Printf("Gateway (Go) corriendo en http://%s/", direccion)
 	}
