@@ -187,6 +187,25 @@ En la base de datos del servidor (no en tu computadora):
 - **Tamaño:** rechaza peticiones de más de 1 MB (**413**).
 - **Tiempos de espera:** corta las conexiones que no terminan de mandar su petición y deja de esperar a un microservicio trabado después de 20 segundos (**502**).
 
+## Con Docker (opcional)
+
+Para probar en tu Mac lo mismo que se va a subir a Google Cloud: el Gateway y los 5 microservicios, cada uno en su contenedor. SQL Server sigue en el suyo (`sql_server_container`).
+
+```bash
+docker compose up --build
+```
+
+Apaga antes `./iniciar.sh`, porque los dos usan el puerto 8080. Para apagar los contenedores, **Ctrl+C**; para borrarlos, `docker compose down`.
+
+| Archivo | Qué hace |
+|---|---|
+| `Backend/Dockerfile` | Una sola receta para los 5 microservicios de Python (`--build-arg SERVICIO=Login`, `Productos`…). Instala el conector de SQL Server de Microsoft (ODBC Driver 18, acepta su licencia) y pone la hora de México (`TZ=America/Mexico_City`) |
+| `Backend-Go/gateway/Dockerfile` | Compila el Gateway y lo deja en una imagen mínima de ~16 MB, sin shell y sin permisos de administrador |
+| `docker-compose.yml` | Levanta los 6 contenedores. Solo el Gateway se abre a tu Mac (en `127.0.0.1:8080`) |
+| `.dockerignore` | Evita que los `.env`, las pruebas y `__pycache__` entren a las imágenes |
+
+Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cada microservicio al arrancar. Dentro de Docker, el Gateway encuentra a los microservicios con las variables `URL_LOGIN`, `URL_PRODUCTOS`, `URL_PROMOCIONES`, `URL_ORDENES` y `URL_SOPORTE`, y escucha en `HOST=0.0.0.0`; sin esas variables usa las direcciones de `iniciar.sh`.
+
 ## Pruebas automáticas
 
 ```bash

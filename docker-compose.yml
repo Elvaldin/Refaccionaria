@@ -1,0 +1,58 @@
+# Refaccionaria en contenedores: el Gateway (Go) y los 5 microservicios (Python).
+# Sirve para probar en tu Mac lo mismo que se va a subir a Google Cloud.
+#
+#   docker compose up --build      (arrancar; Ctrl+C para apagar)
+#   docker compose down            (borrar los contenedores)
+#
+# Apaga antes ./iniciar.sh: los dos usan el puerto 8080.
+#
+# SQL Server NO va aquí: sigue en su propio contenedor (sql_server_container)
+# y los microservicios llegan a él por host.docker.internal.
+# Las contraseñas se leen de los .env de cada microservicio; no quedan en las imágenes.
+
+x-microservicio: &microservicio
+  restart: unless-stopped
+  environment:
+    BD_SERVER: host.docker.internal,1433
+    BD_DRIVER: ODBC Driver 18 for SQL Server
+
+services:
+  login:
+    <<: *microservicio
+    build: { context: ./Backend, args: { SERVICIO: Login } }
+    env_file: Backend/Login/.env
+
+  productos:
+    <<: *microservicio
+    build: { context: ./Backend, args: { SERVICIO: Productos } }
+    env_file: Backend/Productos/.env
+
+  promociones:
+    <<: *microservicio
+    build: { context: ./Backend, args: { SERVICIO: Promociones } }
+    env_file: Backend/Promociones/.env
+
+  ordenes:
+    <<: *microservicio
+    build: { context: ./Backend, args: { SERVICIO: Ordenes } }
+    env_file: Backend/Ordenes/.env
+
+  soporte:
+    <<: *microservicio
+    build: { context: ./Backend, args: { SERVICIO: Soporte } }
+    env_file: Backend/Soporte/.env
+
+  gateway:
+    build: ./Backend-Go/gateway
+    restart: unless-stopped
+    environment:
+      URL_LOGIN: http://login:8080
+      URL_PRODUCTOS: http://productos:8080
+      URL_PROMOCIONES: http://promociones:8080
+      URL_ORDENES: http://ordenes:8080
+      URL_SOPORTE: http://soporte:8080
+    # Solo el Gateway se abre a tu Mac, y solo en 127.0.0.1.
+    # Los microservicios no tienen puertos abiertos: solo el Gateway llega a ellos.
+    ports:
+      - "127.0.0.1:${PUERTO_GATEWAY:-8080}:8080"
+    depends_on: [login, productos, promociones, ordenes, soporte]

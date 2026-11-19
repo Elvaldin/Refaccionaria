@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	usarURLsDelEntorno()
 	rutas := http.NewServeMux()
 
 	// Cada ruta de la tabla se conecta con su microservicio de Python.
@@ -31,11 +32,21 @@ func main() {
 		rutas.HandleFunc("GET /openapi/{archivo}", especificacion)
 	}
 
+	// Puerto: PUERTO (iniciar.sh), o PORT, que es el que pone Google Cloud Run
 	puerto := os.Getenv("PUERTO")
+	if puerto == "" {
+		puerto = os.Getenv("PORT")
+	}
 	if puerto == "" {
 		puerto = "8080"
 	}
-	direccion := "127.0.0.1:" + puerto
+	// En tu computadora solo escucha en 127.0.0.1 (nadie de fuera entra).
+	// Dentro de un contenedor tiene que ser HOST=0.0.0.0 para que llegue el tráfico.
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	direccion := host + ":" + puerto
 
 	// Tiempos máximos: así una conexión lenta (o alguien que la deja abierta
 	// a propósito) no se queda ocupando el Gateway para siempre
