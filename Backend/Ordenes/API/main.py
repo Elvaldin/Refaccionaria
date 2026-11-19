@@ -14,20 +14,24 @@ from Application.orden_use_cases import (
     GestionarOrdenes, NoEncontradoError, DatosInvalidosError, ConflictoError, PermisoDenegadoError,
 )
 
-app = FastAPI(title="Ordenes API")
+# redirect_slashes=False: /api/login/ (con diagonal al final) da 404 en vez de
+# redirigir a una dirección http:// interna
+app = FastAPI(title="Ordenes API", redirect_slashes=False)
 
 TipoOrden = Literal["Compra", "Venta"]
 EstadoOrden = Literal["Pendiente", "En Proceso", "Completada", "Cancelada"]
 
+# Límites: lo que cabe en la base (DECIMAL(10,2) llega a 99,999,999.99) y lo
+# razonable en una orden. Sin ellos, un número gigante tronaba la base (error 500)
 class DetalleRequest(BaseModel):
-    id_producto: int
-    cantidad: int = Field(gt=0)
-    precio_unitario: Optional[float] = Field(default=None, ge=0)
+    id_producto: int = Field(gt=0)
+    cantidad: int = Field(gt=0, le=10000)
+    precio_unitario: Optional[float] = Field(default=None, ge=0, le=99_999_999.99)
 
 class OrdenRequest(BaseModel):
     tipo: TipoOrden
     observaciones: Optional[str] = Field(default=None, max_length=255)
-    productos: List[DetalleRequest] = Field(min_length=1)
+    productos: List[DetalleRequest] = Field(min_length=1, max_length=100)
 
 class CambiarEstadoRequest(BaseModel):
     estado: EstadoOrden

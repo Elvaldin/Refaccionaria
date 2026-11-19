@@ -12,7 +12,9 @@ from Infrastructure.tokens import leer_token
 from Domain.entities import Promocion
 from Application.promocion_use_cases import GestionarPromociones, NoEncontradoError, DatosInvalidosError, RevisarPermisos, PermisoDenegadoError
 
-app = FastAPI(title="Promociones API")
+# redirect_slashes=False: /api/login/ (con diagonal al final) da 404 en vez de
+# redirigir a una dirección http:// interna
+app = FastAPI(title="Promociones API", redirect_slashes=False)
 
 
 class PromocionRequest(BaseModel):
@@ -35,10 +37,10 @@ class PromocionRequest(BaseModel):
 
 
 class CrearPromocionRequest(PromocionRequest):
-    productos: List[int] = Field(default_factory=list)   # ids de los productos que entran a la promoción
+    productos: List[int] = Field(default_factory=list, max_length=500)   # ids de los productos que entran a la promoción
 
 class EditarPromocionRequest(PromocionRequest):
-    productos: Optional[List[int]] = None   # Si viene, esos quedan como sus productos; si no, no se tocan
+    productos: Optional[List[int]] = Field(default=None, max_length=500)   # Si viene, esos quedan como sus productos; si no, no se tocan
 
 class AgregarProductoRequest(BaseModel):
     id_producto: int

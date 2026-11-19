@@ -98,8 +98,11 @@ class SQLServerProductoRepository(ProductoRepository):
             query += " AND p.Id_categoria = ?"
             params.append(id_categoria)
         if buscar:
+            # %, _ y [ son comodines de LIKE: se "escapan" para que busquen el carácter tal cual
+            # (si no, buscar "%" regresaría todos los productos)
+            literal = buscar.replace("[", "[[]").replace("%", "[%]").replace("_", "[_]")
             query += " AND p.Nombre LIKE ?"
-            params.append(f"%{buscar}%")
+            params.append(f"%{literal}%")
         query += " ORDER BY p.Nombre"
 
         conn = get_db_connection()

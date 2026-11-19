@@ -190,4 +190,6 @@ Todas las rutas del chat piden token.
 | `/docs` | Swagger con un menú para elegir el microservicio |
 | `/openapi/{servicio}.json` | Descripción OpenAPI de cada microservicio (`login`, `productos`, `promociones`, `ordenes`, `soporte`) |
 
+Las rutas no llevan diagonal al final: `/api/productos/` da **404** (no redirige). Límites que dan **422**: búsqueda de más de 100 letras, más de 100 productos o más de 10,000 piezas en una orden, y precios que no caben en la base (más de 99,999,999.99).
+
 La página y la API están en la misma dirección, así que el navegador no necesita CORS. Si otro sitio tiene que llamar a la API, se pone en `CORS_ORIGENES` (ver el README). Las respuestas de `/api` llevan `Cache-Control: no-store` y no dicen qué servidor hay detrás.

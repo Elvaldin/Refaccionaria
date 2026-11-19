@@ -15,7 +15,9 @@ from Application.soporte_use_cases import (
     PermisoDenegadoError, ConflictoError,
 )
 
-app = FastAPI(title="Soporte API")
+# redirect_slashes=False: /api/login/ (con diagonal al final) da 404 en vez de
+# redirigir a una dirección http:// interna
+app = FastAPI(title="Soporte API", redirect_slashes=False)
 
 class SoporteRequest(BaseModel):
     correo: Optional[str] = Field(default=None, max_length=100, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")

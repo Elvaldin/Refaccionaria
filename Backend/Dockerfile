@@ -29,6 +29,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 ARG SERVICIO
+# Si no se dice cuál (o se escribe mal), se detiene aquí: si no, copiaría Backend/ completo
+RUN case "$SERVICIO" in \
+      Login|Productos|Promociones|Ordenes|Soporte) ;; \
+      *) echo "Falta --build-arg SERVICIO=Login, Productos, Promociones, Ordenes o Soporte (llegó: '$SERVICIO')"; exit 1 ;; \
+    esac
 COPY ${SERVICIO}/ .
 
 # Corre como un usuario normal, no como administrador (root)

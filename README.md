@@ -139,6 +139,8 @@ Después abre cada `.env` y llena:
   ```bash
   python3 -c "import secrets; print(secrets.token_hex(32))"
   ```
+- `BD_CONFIAR_CERTIFICADO`: déjalo en `si` en tu computadora. La conexión a SQL Server **siempre va cifrada**; con `si` se acepta el certificado que SQL Server (en Docker) se hizo él mismo. Con `ENTORNO=produccion` se usa `no` si no lo pones: se revisa que el certificado sea válido, para que nadie en medio se haga pasar por la base de datos.
+- `BD_USER` ya no tiene valor por omisión: si falta, el microservicio avisa en vez de intentar entrar como `sa`.
 
 ## Cómo correrlo
 
@@ -186,7 +188,8 @@ En la base de datos del servidor (no en tu computadora):
    cd Backend/Login && ../../.venv/bin/python crear_administrador.py
    ```
 5. Crea las cuentas reales del personal desde la página, entrando como admin (**Registrar usuario**).
-6. Arranca el Gateway con `ENTORNO=produccion`: así no publica `/gateway`, `/docs` ni `/openapi/...`, que muestran direcciones y puertos internos. La página web (`/`) sí se publica.
+6. Arranca el Gateway **y los 5 microservicios** con `ENTORNO=produccion`. El Gateway así no publica `/gateway`, `/docs` ni `/openapi/...`, que muestran direcciones y puertos internos (la página web, `/`, sí se publica), cierra CORS y baja el límite de registros a 10 por hora. Los microservicios así revisan el certificado de SQL Server (ver `BD_CONFIAR_CERTIFICADO`).
+7. Las fotos de los productos son de Wikimedia Commons: agrega una página de créditos con el autor y la licencia de cada una (muchas licencias, como CC BY-SA, lo piden).
 
 **Protecciones del Gateway** (`Backend-Go/gateway`):
 

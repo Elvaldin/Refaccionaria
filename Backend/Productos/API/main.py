@@ -1,7 +1,7 @@
 import sys
 import os
 from typing import List, Optional
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -14,7 +14,9 @@ from Application.producto_use_cases import (
     CategoriaEnUsoError, CategoriaRepetidaError, RevisarPermisos, PermisoDenegadoError,
 )
 
-app = FastAPI(title="Productos API")
+# redirect_slashes=False: /api/login/ (con diagonal al final) da 404 en vez de
+# redirigir a una dirección http:// interna
+app = FastAPI(title="Productos API", redirect_slashes=False)
 
 
 class CategoriaRequest(BaseModel):
@@ -31,8 +33,8 @@ class CategoriaResponse(BaseModel):
 class ProductoRequest(BaseModel):
     nombre: str = Field(min_length=1, max_length=100)
     descripcion: Optional[str] = Field(default=None, max_length=255)
-    precio: float = Field(ge=0)
-    stock: int = Field(default=0, ge=0)
+    precio: float = Field(ge=0, le=99_999_999.99)   # lo que cabe en DECIMAL(10,2)
+    stock: int = Field(default=0, ge=0, le=1_000_000)
     id_categoria: int
     # Foto del producto: una ruta de la carpeta img/ de la página (img/productos/bujia.jpg)
     # o una dirección https://. Así nadie puede meter "javascript:" ni otra cosa rara
@@ -114,7 +116,7 @@ def eliminar_categoria(id_categoria: int, id_login: int = Depends(usuario_actual
 # ---------- Productos ----------
 
 @app.get("/api/productos", response_model=List[ProductoResponse])
-def listar_productos(categoria: Optional[int] = None, buscar: Optional[str] = None):
+def listar_productos(categoria: Optional[int] = None, buscar: Optional[str] = Query(default=None, max_length=100)):
     return [to_response(p) for p in productos_use_case().listar(categoria, buscar)]
 
 

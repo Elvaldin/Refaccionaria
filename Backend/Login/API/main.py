@@ -18,7 +18,9 @@ from Application.login_use_case import (
     LoginUser, RegisterUser, DatosInvalidosError, ConflictoError, PermisoDenegadoError,
 )
 
-app = FastAPI(title="Login API")
+# redirect_slashes=False: /api/login/ (con diagonal al final) da 404 en vez de
+# redirigir a una dirección http:// interna
+app = FastAPI(title="Login API", redirect_slashes=False)
 
 Rol = Literal["Administrador", "Empleado", "Almacenista", "Cliente"]
 
