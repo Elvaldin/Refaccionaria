@@ -1,0 +1,17 @@
+# Lo que NO se sube a Google Cloud Build con "gcloud builds submit".
+# Solo hacen falta Backend/, Backend-Go/ y Frontend/; nada de contraseñas.
+.gcloudignore
+.git/
+.gitignore
+.venv/
+.venv-py39/
+**/.env
+**/__pycache__/
+**/*.pyc
+**/.DS_Store
+BD/
+docs/
+pruebas/
+gcp/
+*.zip
+*.tar.gz

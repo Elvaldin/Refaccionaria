@@ -18,12 +18,25 @@ const tamanoMaximo = 1 << 20 // 1 MB
 // nuevoProxy crea el "reenviador" hacia un microservicio de Python.
 // httputil.ReverseProxy ya viene en Go: recibe la petición, se la pasa
 // a Python tal cual y le regresa al navegador lo que Python conteste.
-func nuevoProxy(servicio Servicio) http.Handler {
+//
+// identidad: con IDENTIDAD_GOOGLE=si, el token con el que el Gateway se
+// identifica ante Google Cloud Run (nil = no hace falta, como en tu computadora).
+func nuevoProxy(servicio Servicio, identidad *identidadGoogle) http.Handler {
 	destino, err := url.Parse(servicio.URL)
 	if err != nil {
 		log.Fatalf("La URL de %s no es válida: %v", servicio.Nombre, err)
 	}
 	proxy := httputil.NewSingleHostReverseProxy(destino)
+	dirigir := proxy.Director
+	proxy.Director = func(r *http.Request) {
+		dirigir(r)
+		// Host = el del microservicio. En Cloud Run cada servicio tiene su propia
+		// dirección (login-xxxx.run.app) y Google lo busca por este encabezado;
+		// con el del Gateway contestaría 404
+		r.Host = destino.Host
+		// Nadie de fuera puede mandar su propio token de identidad
+		r.Header.Del("X-Serverless-Authorization")
+	}
 
 	// Tiempos máximos para hablar con Python: si un microservicio se traba,
 	// el Gateway no se queda esperando para siempre
@@ -32,6 +45,9 @@ func nuevoProxy(servicio Servicio) http.Handler {
 		ResponseHeaderTimeout: 20 * time.Second,
 		MaxIdleConnsPerHost:   20,
 		IdleConnTimeout:       90 * time.Second,
+	}
+	if identidad != nil {
+		proxy.Transport = transporteConIdentidad{base: proxy.Transport, identidad: identidad, audiencia: servicio.URL}
 	}
 
 	// Si algo sale mal, el detalle (dirección, puerto, error) se queda en la
@@ -83,10 +99,12 @@ func limitarTamano(siguiente http.Handler) http.Handler {
 	})
 }
 
-// conRegistro escribe en la terminal cada petición
+// conRegistro escribe en la terminal (o en Cloud Logging) cada petición, con la
+// IP que usa el límite de login. Sirve para revisar que PROXIES_DE_CONFIANZA esté
+// bien: al entrar a la tienda desde tu casa, debe salir la IP de tu casa
 func conRegistro(siguiente http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s", r.Method, r.URL.RequestURI())
+		log.Printf("%s %s %s", ipDe(r), r.Method, r.URL.RequestURI())
 		siguiente.ServeHTTP(w, r)
 	})
 }

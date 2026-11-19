@@ -82,7 +82,11 @@ Login/
 │   └── script.js
 ├── docs/
 │   ├── ARQUITECTURA.md          Capas, dependencias y decisiones
-│   └── API.md                   Todas las rutas de la API
+│   ├── API.md                   Todas las rutas de la API
+│   └── DESPLIEGUE_GCP.md        Cómo publicarla en Google Cloud (Cloud Run + Cloud SQL), paso a paso
+├── gcp/desplegar.sh             Construye las imágenes y publica los 6 servicios en Cloud Run
+├── cloudbuild.yaml              Las 6 imágenes en Cloud Build (linux/amd64)
+├── docker-compose.yml           Los 6 servicios en contenedores, en tu Mac
 ├── pruebas/prueba_api.py        Prueba de punta a punta por el Gateway
 ├── iniciar.sh                   Arranca todo con un solo comando
 └── pruebas.sh                   Corre todas las pruebas automáticas
@@ -219,6 +223,8 @@ Apaga antes `./iniciar.sh`, porque los dos usan el puerto 8080. Para apagar los 
 | `docker-compose.yml` | Levanta los 6 contenedores. Solo el Gateway se abre a tu Mac (en `127.0.0.1:8080`) |
 | `.dockerignore` | Evita que los `.env`, las pruebas y `__pycache__` entren a las imágenes |
 
+**Para publicarla en Internet** sigue [docs/DESPLIEGUE_GCP.md](docs/DESPLIEGUE_GCP.md): Google Cloud Run para el Gateway y los microservicios (estos últimos privados: solo el Gateway llega a ellos, con `IDENTIDAD_GOOGLE=si`), Cloud SQL for SQL Server con IP privada y las contraseñas en Secret Manager. `docker compose` no se puede subir tal cual a Cloud Run: cada servicio se publica por separado con `gcp/desplegar.sh`.
+
 Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cada microservicio al arrancar. Dentro de Docker, el Gateway encuentra a los microservicios con las variables `URL_LOGIN`, `URL_PRODUCTOS`, `URL_PROMOCIONES`, `URL_ORDENES` y `URL_SOPORTE`, y escucha en `HOST=0.0.0.0`; sin esas variables usa las direcciones de `iniciar.sh`.
 
 ## Pruebas automáticas
@@ -230,7 +236,7 @@ Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cad
 | Qué prueba | Cuántas | ¿Necesita la base de datos? |
 |---|---|---|
 | **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador, promociones vencidas, quién puede cambiar el precio | 103 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
-| **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6), que un atacante no bloquee a los demás, encabezados de seguridad, CSP, CORS y límite de registros | 15 | No |
+| **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6), que un atacante no bloquee a los demás, encabezados de seguridad, CSP, CORS y límite de registros, el proxy (Host y token de identidad de Google) | 18 | No |
 | **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 38 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
 
 También se pueden correr por separado:

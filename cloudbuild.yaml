@@ -1,0 +1,57 @@
+# Construye las 6 imágenes de la Refaccionaria en Google Cloud Build y las sube
+# a Artifact Registry. Cloud Build las hace para linux/amd64, que es lo que usa
+# Cloud Run (las que hace una Mac con chip M son arm64 y no sirven allá).
+# Lo usa gcp/desplegar.sh; a mano sería:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_REGION=us-central1,_ETIQUETA=v1 .
+#
+# Qué archivos se suben a Cloud Build: ver .gcloudignore (nunca los .env).
+
+substitutions:
+  _REGION: us-central1
+  _REPO: refaccionaria
+  _ETIQUETA: manual
+
+options:
+  env: ["DOCKER_BUILDKIT=1"]   # para que se use Backend-Go/gateway/Dockerfile.dockerignore
+
+steps:
+  # Las 6 imágenes se construyen al mismo tiempo (waitFor: ["-"])
+  - id: gateway
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "Backend-Go/gateway/Dockerfile",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:${_ETIQUETA}", "."]
+    waitFor: ["-"]
+  - id: login
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "--build-arg", "SERVICIO=Login",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/login:${_ETIQUETA}", "Backend"]
+    waitFor: ["-"]
+  - id: productos
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "--build-arg", "SERVICIO=Productos",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/productos:${_ETIQUETA}", "Backend"]
+    waitFor: ["-"]
+  - id: promociones
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "--build-arg", "SERVICIO=Promociones",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/promociones:${_ETIQUETA}", "Backend"]
+    waitFor: ["-"]
+  - id: ordenes
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "--build-arg", "SERVICIO=Ordenes",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/ordenes:${_ETIQUETA}", "Backend"]
+    waitFor: ["-"]
+  - id: soporte
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "--build-arg", "SERVICIO=Soporte",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/soporte:${_ETIQUETA}", "Backend"]
+    waitFor: ["-"]
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/gateway:${_ETIQUETA}"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/login:${_ETIQUETA}"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/productos:${_ETIQUETA}"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/promociones:${_ETIQUETA}"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/ordenes:${_ETIQUETA}"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/soporte:${_ETIQUETA}"

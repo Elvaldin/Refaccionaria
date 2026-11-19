@@ -16,11 +16,17 @@ func main() {
 	}
 	rutas := http.NewServeMux()
 
+	// En Google Cloud Run (IDENTIDAD_GOOGLE=si) el Gateway se identifica ante cada microservicio
+	var identidad *identidadGoogle
+	if os.Getenv("IDENTIDAD_GOOGLE") == "si" {
+		identidad = nuevaIdentidadGoogle()
+	}
+
 	// Cada ruta de la tabla se conecta con su microservicio de Python.
 	// Se registra "/api/productos" y también "/api/productos/" para que
 	// entren /api/productos/1, /api/productos/1/... etc.
 	for _, servicio := range servicios {
-		proxy := nuevoProxy(servicio)
+		proxy := nuevoProxy(servicio, identidad)
 		for _, ruta := range servicio.Rutas {
 			rutas.Handle(ruta, proxy)
 			rutas.Handle(ruta+"/", proxy)
@@ -93,5 +99,8 @@ func main() {
 		log.Printf("Límite de login: IP de la conexión (sin proxy delante)")
 	}
 	log.Printf("CORS: la API acepta llamadas del navegador desde %s", cors)
+	if identidad != nil {
+		log.Printf("Identidad de Google: el Gateway manda su token a los microservicios")
+	}
 	log.Fatal(servidor.ListenAndServe())
 }
