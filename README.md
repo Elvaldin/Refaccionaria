@@ -92,7 +92,7 @@ Cada microservicio sigue **arquitectura limpia** con 4 capas. La explicación co
   docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=TuContraseña123" -p 1433:1433 --name sql_server_container -d mcr.microsoft.com/mssql/server:2022-latest
   ```
 - **ODBC Driver 17 for SQL Server**
-- **Python 3.9** o más nuevo
+- **Python 3.12** o más nuevo (el proyecto se probó con Python 3.15). Revisa tu versión con `python3 --version`
 - **Go 1.22** o más nuevo (el proyecto se probó con Go 1.27)
 
 ## Instalación
