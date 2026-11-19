@@ -1,40 +1,17 @@
 /* ==========================================================
-   Refaccionaria - Datos iniciales (usuarios, catálogo y contacto)
+   Refaccionaria - Datos iniciales (catálogo y contacto)
    Ejecútalo después de 01_crear_base.sql
    Se puede correr varias veces: no duplica nada.
 
-   Usuarios para entrar a la página:
-       admin    / Admin123      (rol Administrador)
-       empleado / Empleado123   (rol Empleado)
-       almacen  / Almacen123    (rol Almacenista)
-       cliente  / Cliente123    (rol Cliente)
-
-   ⚠️  Esas contraseñas son públicas: son solo para desarrollo.
-   En el servidor de producción, después de este script corre
-   11_quitar_usuarios_de_prueba.sql y cámbiale la contraseña al
-   admin con Backend/Login/cambiar_contrasena.py.
+   Este script NO crea usuarios, así que también sirve para el
+   servidor de producción.
+     - En tu computadora: corre después 12_usuarios_de_prueba.sql
+       (admin, empleado, almacen y cliente, con contraseñas públicas).
+     - En producción: crea el primer Administrador con
+       Backend/Login/crear_administrador.py (nunca con el 12).
    ========================================================== */
 
 USE Refaccionaria;
-GO
-
-/* ---------- Usuarios de prueba ---------- */
--- Las contraseñas ya van como hash bcrypt (así las guarda el microservicio de Login)
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'admin')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('admin', 'admin@refaccionaria.com', '$2b$12$9AmyQI4r4o/HLhgDNq/ctuiXRLLBJtQcrJz.6FtXWS6dftxox1DcC', 'Administrador');
-
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'empleado')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('empleado', 'empleado@refaccionaria.com', '$2b$12$5JghlBpWB8963Ka7.U3oG.cjA4PbKUyyGOKoOeuKJrhjoFthm81Ce', 'Empleado');
-
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'almacen')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('almacen', 'almacen@refaccionaria.com', '$2b$12$A3cvRzeFJfcuYTjq1jpWDuaTuzuwg3iOjfYfU1zzKM4HRZCmbpelO', 'Almacenista');
-
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'cliente')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('cliente', 'cliente@correo.com', '$2b$12$aPIDkNvptKQohbqB0S8MjOHzrc9bj0qbyZWIoqrN23OsvBQM0ux1W', 'Cliente');
 GO
 
 /* ---------- Categorías ---------- */
@@ -101,8 +78,7 @@ IF NOT EXISTS (SELECT 1 FROM SOPORTE)
 GO
 
 /* ---------- Revisión ---------- */
-SELECT 'LOGIN' AS Tabla, COUNT(*) AS Filas FROM LOGIN
-UNION ALL SELECT 'CATEGORIAS', COUNT(*) FROM CATEGORIAS
+SELECT 'CATEGORIAS' AS Tabla, COUNT(*) AS Filas FROM CATEGORIAS
 UNION ALL SELECT 'PRODUCTOS', COUNT(*) FROM PRODUCTOS
 UNION ALL SELECT 'PROMOCION', COUNT(*) FROM PROMOCION
 UNION ALL SELECT 'PROMOCIONPRODUCTO', COUNT(*) FROM PROMOCIONPRODUCTO

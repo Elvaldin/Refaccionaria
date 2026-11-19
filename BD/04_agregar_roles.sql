@@ -44,31 +44,8 @@ GO
 UPDATE LOGIN SET Rol = 'Administrador' WHERE Username = 'admin';
 GO
 
--- 7) Usuarios de prueba
---    empleado / Empleado123   (rol Empleado)
---    almacen  / Almacen123    (rol Almacenista)
---    cliente  / Cliente123    (rol Cliente)
-
--- El usuario "vendedor" de la versión anterior se convierte en "empleado"
-IF EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'vendedor')
-   AND NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'empleado')
-    UPDATE LOGIN
-    SET Username = 'empleado', Email = 'empleado@refaccionaria.com',
-        Password = '$2b$12$5JghlBpWB8963Ka7.U3oG.cjA4PbKUyyGOKoOeuKJrhjoFthm81Ce', Rol = 'Empleado'
-    WHERE Username = 'vendedor';
-
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'empleado')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('empleado', 'empleado@refaccionaria.com', '$2b$12$5JghlBpWB8963Ka7.U3oG.cjA4PbKUyyGOKoOeuKJrhjoFthm81Ce', 'Empleado');
-
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'almacen')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('almacen', 'almacen@refaccionaria.com', '$2b$12$A3cvRzeFJfcuYTjq1jpWDuaTuzuwg3iOjfYfU1zzKM4HRZCmbpelO', 'Almacenista');
-
-IF NOT EXISTS (SELECT 1 FROM LOGIN WHERE Username = 'cliente')
-    INSERT INTO LOGIN (Username, Email, Password, Rol) VALUES
-    ('cliente', 'cliente@correo.com', '$2b$12$aPIDkNvptKQohbqB0S8MjOHzrc9bj0qbyZWIoqrN23OsvBQM0ux1W', 'Cliente');
-GO
+-- 7) Los usuarios de prueba (empleado, almacen, cliente) ya no se crean aquí:
+--    están en 12_usuarios_de_prueba.sql, que es SOLO para tu computadora.
 
 SELECT Id_login, Username, Rol FROM LOGIN;
 GO

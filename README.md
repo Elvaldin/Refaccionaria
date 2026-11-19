@@ -41,14 +41,17 @@ SQL Server                     Base de datos "Refaccionaria"
 Login/
 ├── BD/
 │   ├── 01_crear_base.sql        Crea la base y las 11 tablas
-│   ├── 02_datos_ejemplo.sql     Usuarios, catálogo real (5 categorías, 23 piezas) y el contacto
+│   ├── 02_datos_ejemplo.sql     Catálogo real (5 categorías, 23 piezas) y el contacto (sin usuarios)
 │   ├── 03_agregar_horario.sql   Solo para bases creadas antes de la columna Horario
 │   ├── 04_agregar_roles.sql     Solo para bases creadas antes de los 4 roles
 │   ├── 05_categoria_unicas.sql  Solo para bases creadas antes de los nombres de categoría únicos
 │   ├── 06_texto_unicode.sql     Solo para bases creadas antes de que los textos aceptaran emojis
 │   ├── 07_numeros_sin_saltos.sql Quita los saltos de 1000 en los números (REF-5021 → REF-011)
 │   ├── 08_agregar_imagen.sql    Solo para bases creadas antes de la foto de cada producto
-│   └── 09_borrar_datos_de_prueba.sql ⚠️ Borra órdenes, chats, promociones y productos (una sola vez, antes de abrir)
+│   ├── 09_borrar_datos_de_prueba.sql ⚠️ Borra órdenes, chats, promociones y productos (una sola vez, antes de abrir; pide confirmación)
+│   ├── 10_usuario_app.sql       Crea el usuario de SQL Server de la app (refaccionaria_app)
+│   ├── 11_quitar_usuarios_de_prueba.sql Borra empleado, almacen y cliente de una base que los tenga
+│   └── 12_usuarios_de_prueba.sql ⚠️ Solo en tu computadora: admin, empleado, almacen y cliente
 ├── Backend/                     Microservicios en Python
 │   ├── requirements.txt
 │   ├── .env.example             Plantilla de la conexión a la base de datos
@@ -101,14 +104,15 @@ Cada microservicio sigue **arquitectura limpia** con 4 capas. La explicación co
 
 1. `BD/01_crear_base.sql`
 2. `BD/02_datos_ejemplo.sql`
+3. `BD/12_usuarios_de_prueba.sql` (los usuarios de prueba de abajo; **solo en tu computadora**, nunca en el servidor)
 
-Los dos se pueden correr varias veces: solo crean lo que falta y no duplican datos. Si tu base ya existía, vuelve a correr `01_crear_base.sql` para que se creen las tablas nuevas, como las del chat. `BD/03_agregar_horario.sql`, `BD/04_agregar_roles.sql`, `BD/05_categoria_unicas.sql` y `BD/06_texto_unicode.sql` solo hacen falta si tu base se creó antes de que existieran la columna `Horario`, los roles, los nombres de categoría únicos o los textos con emojis (antes un 😀 en el chat se guardaba como `??`).
+Los tres se pueden correr varias veces: solo crean lo que falta y no duplican datos. Si tu base ya existía, vuelve a correr `01_crear_base.sql` para que se creen las tablas nuevas, como las del chat. `BD/03_agregar_horario.sql`, `BD/04_agregar_roles.sql`, `BD/05_categoria_unicas.sql` y `BD/06_texto_unicode.sql` solo hacen falta si tu base se creó antes de que existieran la columna `Horario`, los roles, los nombres de categoría únicos o los textos con emojis (antes un 😀 en el chat se guardaba como `??`).
 
-`BD/07_numeros_sin_saltos.sql` evita que SQL Server se brinque 1000 números cada vez que se reinicia (por eso un producto nuevo podía salir como `REF-5021`), y regresa cada contador al número más alto que existe. No cambia datos. Córrelo si tu base ya existía, o si ves códigos con saltos grandes. Es normal que falten números sueltos cuando algo se borra: SQL Server no reutiliza los números borrados.
+`BD/07_numeros_sin_saltos.sql` evita que SQL Server se brinque 1000 números cada vez que se reinicia (por eso un producto nuevo podía salir como `REF-5021`), y regresa cada contador al número más alto que existe. No cambia datos. Córrelo si tu base ya existía, o si ves códigos con saltos grandes. Las tablas que nunca han tenido filas no las toca, así que en una base nueva todo sigue empezando en 1. Es normal que falten números sueltos cuando algo se borra: SQL Server no reutiliza los números borrados.
 
-`BD/08_agregar_imagen.sql` agrega la columna `Imagen` (la foto de cada producto) a una base que ya existía. `BD/09_borrar_datos_de_prueba.sql` **borra para siempre** las órdenes, movimientos, promociones, chats, productos y categorías (no los usuarios ni el contacto) y reinicia los números; úsalo una sola vez antes de abrir la tienda y después vuelve a correr `02_datos_ejemplo.sql`.
+`BD/08_agregar_imagen.sql` agrega la columna `Imagen` (la foto de cada producto) a una base que ya existía. `BD/09_borrar_datos_de_prueba.sql` **borra para siempre** las órdenes, movimientos, promociones, chats, productos y categorías (no los usuarios ni el contacto) y reinicia los números; úsalo una sola vez antes de abrir la tienda y después vuelve a correr `02_datos_ejemplo.sql`. Para que no se corra por accidente, no borra nada hasta que cambies `N'NO'` por `N'SI, BORRAR TODO'` en la línea de `@confirmo` (cierra el archivo **sin guardar**).
 
-`BD/10_usuario_app.sql` crea el usuario de SQL Server `refaccionaria_app`, con el que entran los 5 microservicios: solo puede leer y escribir datos de `Refaccionaria` (no borrar tablas ni tocar otras bases), así que la app ya no usa `sa`. Antes de ejecutarlo cambia `PEGA-AQUI-LA-CONTRASENA` por una contraseña nueva y, al terminar, cierra el archivo **sin guardar**. `BD/11_quitar_usuarios_de_prueba.sql` es **solo para producción** (ver [Antes de publicar en Internet](#antes-de-publicar-en-internet)).
+`BD/10_usuario_app.sql` crea el usuario de SQL Server `refaccionaria_app`, con el que entran los 5 microservicios: solo puede leer y escribir datos de `Refaccionaria` (no borrar tablas ni tocar otras bases), así que la app ya no usa `sa`. Antes de ejecutarlo cambia `PEGA-AQUI-LA-CONTRASENA` por una contraseña nueva y, al terminar, cierra el archivo **sin guardar** (si no la cambias, no hace nada). `BD/11_quitar_usuarios_de_prueba.sql` es **solo para producción** (ver [Antes de publicar en Internet](#antes-de-publicar-en-internet)).
 
 **Fotos de los productos.** Están en `Frontend/img/productos`. Si agregas una foto, ponla en esa carpeta y escribe su ruta (`img/productos/archivo.jpg`) en el campo **Foto** al editar el producto.
 
@@ -172,12 +176,12 @@ Antes de arrancar, el script:
 
 En la base de datos del servidor (no en tu computadora):
 
-1. Corre `BD/01_crear_base.sql` y `BD/02_datos_ejemplo.sql` (crean las tablas, el catálogo y los usuarios de prueba).
+1. Corre `BD/01_crear_base.sql` y `BD/02_datos_ejemplo.sql` (crean las tablas, el catálogo y el contacto). **No** corras `BD/12_usuarios_de_prueba.sql`: sus contraseñas están en este README.
 2. Corre `BD/10_usuario_app.sql` con una contraseña **nueva** (no la de tu computadora) y ponla en los `.env` del servidor, junto con un `TOKEN_SECRETO` **nuevo**.
-3. Corre `BD/11_quitar_usuarios_de_prueba.sql`: borra `empleado`, `almacen` y `cliente`.
-4. Cámbiale la contraseña al admin (pide una de 12 caracteres o más y no la muestra en pantalla):
+3. Si esa base ya tenía los usuarios de prueba (por ejemplo, porque es una copia de la de tu computadora), corre `BD/11_quitar_usuarios_de_prueba.sql` y cámbiale la contraseña al admin con `cambiar_contrasena.py admin`.
+4. Crea tu Administrador con un usuario, un correo y una contraseña de 12 caracteres o más (no se muestra en pantalla):
    ```bash
-   cd Backend/Login && ../../.venv/bin/python cambiar_contrasena.py admin
+   cd Backend/Login && ../../.venv/bin/python crear_administrador.py
    ```
 5. Crea las cuentas reales del personal desde la página, entrando como admin (**Registrar usuario**).
 6. Arranca el Gateway con `ENTORNO=produccion`: así no publica `/gateway`, `/docs` ni `/openapi/...`, que muestran direcciones y puertos internos. La página web (`/`) sí se publica.
@@ -216,7 +220,7 @@ Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cad
 
 | Qué prueba | Cuántas | ¿Necesita la base de datos? |
 |---|---|---|
-| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña | 98 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
+| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador | 100 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
 | **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6) y que un atacante no bloquee a los demás | 8 | No |
 | **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 37 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
 

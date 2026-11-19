@@ -7,7 +7,7 @@ import unittest
 
 from Domain.entities import User
 from Application.login_use_case import (
-    LoginUser, RegisterUser, CambiarContrasena, UserRepository, PasswordHasher,
+    LoginUser, RegisterUser, CambiarContrasena, CrearAdministrador, UserRepository, PasswordHasher,
     DatosInvalidosError, ConflictoError, PermisoDenegadoError, NoEncontradoError,
 )
 
@@ -145,6 +145,31 @@ class PruebasLogin(unittest.TestCase):
         with self.assertRaises(DatosInvalidosError):
             cambiar.execute("empleado", "Empleado1234")             # pero no la misma que ya tiene
         self.assertIsNotNone(self.login.execute("admin", "Admin123"))   # el admin sigue igual
+
+    # ----- Crear el primer Administrador (crear_administrador.py) -----
+    def test_crear_administrador_y_entrar(self):
+        crear = CrearAdministrador(user_repository=self.repo, password_hasher=self.hasher)
+        nuevo = crear.execute("  dueno ", " Dueno@Tienda.MX ", "una-contrasena-larga")
+        self.assertEqual((nuevo.username, nuevo.email, nuevo.rol), ("dueno", "dueno@tienda.mx", "Administrador"))
+        self.assertTrue(self.login.execute("dueno", "una-contrasena-larga").es_administrador)
+
+    def test_crear_administrador_con_errores_no_crea_nada(self):
+        crear = CrearAdministrador(user_repository=self.repo, password_hasher=self.hasher)
+        antes = len(self.repo.usuarios)
+        for usuario, correo, contrasena in [
+            ("dueno", "dueno@tienda.mx", "corta12345"),         # menos de 12
+            ("dueno", "dueno@tienda.mx", "x" * 73),             # bcrypt solo usa 72 bytes
+            ("du", "dueno@tienda.mx", "una-contrasena-larga"),  # usuario muy corto
+            ("el dueno", "dueno@tienda.mx", "una-contrasena-larga"),
+            ("dueno", "no-es-correo", "una-contrasena-larga"),
+        ]:
+            with self.assertRaises(DatosInvalidosError):
+                crear.execute(usuario, correo, contrasena)
+        with self.assertRaises(ConflictoError):
+            crear.execute("admin", "otro@tienda.mx", "una-contrasena-larga")
+        with self.assertRaises(ConflictoError):
+            crear.execute("dueno", "admin@r.com", "una-contrasena-larga")
+        self.assertEqual(len(self.repo.usuarios), antes)
 
 
 if __name__ == "__main__":

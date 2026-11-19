@@ -2,12 +2,14 @@
    Refaccionaria - Quitar los usuarios de prueba (SOLO EN PRODUCCIÓN)
 
    Borra los usuarios empleado, almacen y cliente: sus contraseñas
-   están escritas en el README y en 02_datos_ejemplo.sql, así que
+   están escritas en el README y en 12_usuarios_de_prueba.sql, así que
    cualquiera podría entrar con ellos.
 
    NO borra al admin. A él cámbiale la contraseña con:
        cd Backend/Login
        ../../.venv/bin/python cambiar_contrasena.py admin
+   (Si la base del servidor se armó sin el 12, como dice el README,
+   no hay usuarios de prueba y este script no hace falta.)
 
    ⚠️  NO lo corras en tu computadora de desarrollo: las pruebas
    automáticas (pruebas.sh) y la demo usan estos usuarios.

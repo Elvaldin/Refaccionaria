@@ -4,12 +4,16 @@ Solo dicen QUÉ necesitan (un repositorio de usuarios y un servicio de
 contraseñas) mediante interfaces. No saben nada de SQL Server ni de bcrypt:
 eso lo pone la capa de Infraestructura.
 """
-from Domain.entities import User, ROLES, ROL_CLIENTE
+from Domain.entities import User, ROLES, ROL_CLIENTE, ROL_ADMINISTRADOR
 from abc import ABC, abstractmethod
+import re
 from typing import Optional
 
 # Largo mínimo de la contraseña al registrarse
 MINIMO_CONTRASENA = 10
+
+# Lo mismo que revisa la API (RegistroRequest), para cuando se crea desde la terminal
+FORMATO_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 class DatosInvalidosError(Exception):
     pass
@@ -113,6 +117,43 @@ class RegisterUser:
 
         user = User(username=username, password_hash=self.password_hasher.hash(password),
                     rol=rol, email=email)
+        user.id = self.user_repository.save(user)
+        return user
+
+
+class CrearAdministrador:
+    """Crea una cuenta de Administrador desde la terminal (crear_administrador.py).
+
+    Sirve para el primer Administrador de la tienda publicada: así en el
+    servidor nunca existe un admin con una contraseña escrita en el README.
+    Pide una contraseña más larga que al registrarse, igual que CambiarContrasena.
+    """
+
+    MINIMO = 12
+
+    def __init__(self, user_repository: UserRepository, password_hasher: PasswordHasher):
+        self.user_repository = user_repository
+        self.password_hasher = password_hasher
+
+    def execute(self, username: str, email: str, password: str) -> User:
+        username = username.strip()
+        email = email.strip().lower()
+        if len(username) < 3 or len(username) > 50 or " " in username:
+            raise DatosInvalidosError("El usuario debe tener de 3 a 50 letras y no llevar espacios")
+        if len(email) > 100 or not FORMATO_CORREO.match(email):
+            raise DatosInvalidosError("El correo no es válido")
+        if len(password) < self.MINIMO:
+            raise DatosInvalidosError(f"La contraseña debe tener al menos {self.MINIMO} caracteres")
+        if len(password.encode("utf-8")) > 72:
+            # bcrypt solo toma en cuenta los primeros 72 bytes
+            raise DatosInvalidosError("La contraseña es demasiado larga (máximo 72 caracteres)")
+        if self.user_repository.find_by_username(username):
+            raise ConflictoError(f"El usuario '{username}' ya existe")
+        if self.user_repository.email_existe(email):
+            raise ConflictoError("Ese correo ya está registrado")
+
+        user = User(username=username, password_hash=self.password_hasher.hash(password),
+                    rol=ROL_ADMINISTRADOR, email=email)
         user.id = self.user_repository.save(user)
         return user
 

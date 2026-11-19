@@ -19,15 +19,21 @@ GO
 
 DECLARE @contrasena NVARCHAR(128) = N'PEGA-AQUI-LA-CONTRASENA';
 IF @contrasena = N'PEGA-AQUI-LA-CONTRASENA'
-    THROW 50000, 'Primero cambia PEGA-AQUI-LA-CONTRASENA por la contraseña nueva.', 1;
-
-DECLARE @sql NVARCHAR(MAX) =
-    CASE WHEN EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'refaccionaria_app')
-         THEN N'ALTER LOGIN refaccionaria_app WITH PASSWORD = ' + QUOTENAME(@contrasena, '''')
-         ELSE N'CREATE LOGIN refaccionaria_app WITH PASSWORD = ' + QUOTENAME(@contrasena, '''')
-              + N', DEFAULT_DATABASE = Refaccionaria, CHECK_POLICY = ON'
-    END;
-EXEC (@sql);
+BEGIN
+    -- SET NOEXEC ON: se brinca todo lo que sigue (hasta el SET NOEXEC OFF del final)
+    RAISERROR(N'No se cambió nada. Primero cambia PEGA-AQUI-LA-CONTRASENA por la contraseña nueva.', 16, 1);
+    SET NOEXEC ON;
+END
+ELSE
+BEGIN
+    DECLARE @sql NVARCHAR(MAX) =
+        CASE WHEN EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'refaccionaria_app')
+             THEN N'ALTER LOGIN refaccionaria_app WITH PASSWORD = ' + QUOTENAME(@contrasena, '''')
+             ELSE N'CREATE LOGIN refaccionaria_app WITH PASSWORD = ' + QUOTENAME(@contrasena, '''')
+                  + N', DEFAULT_DATABASE = Refaccionaria, CHECK_POLICY = ON'
+        END;
+    EXEC (@sql);
+END
 GO
 
 USE Refaccionaria;
@@ -47,3 +53,8 @@ FROM sys.database_role_members m
 JOIN sys.database_principals r ON r.principal_id = m.role_principal_id
 JOIN sys.database_principals u ON u.principal_id = m.member_principal_id
 WHERE u.name = N'refaccionaria_app';
+GO
+
+-- Fin del seguro: SQL Server vuelve a ejecutar normalmente
+SET NOEXEC OFF;
+GO

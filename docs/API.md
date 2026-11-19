@@ -60,6 +60,7 @@ En las tablas de abajo, 🔒 marca las rutas que piden token.
 - **403** si alguien sin token de Administrador intenta crear un usuario que no sea Cliente.
 - **409** si el usuario o el correo ya existen. **400** si la contraseña tiene menos de 10 caracteres o el usuario menos de 3 letras.
 - Para cambiar la contraseña de un usuario existente no hay ruta: se usa `Backend/Login/cambiar_contrasena.py` desde la terminal (pide 12 caracteres o más).
+- El primer Administrador del servidor tampoco se crea por la API: se usa `Backend/Login/crear_administrador.py` (pide 12 caracteres o más).
 
 
 ## Productos · puerto 8001

@@ -8,11 +8,26 @@
 
    NO borra los usuarios ni los datos de contacto.
 
+   Para que no se corra por accidente, primero cambia
+   N'NO' por N'SI, BORRAR TODO' en la línea de @confirmo.
+   Si no, no borra nada. Al terminar cierra el archivo SIN GUARDAR.
+
    Después de correrlo, ejecuta 02_datos_ejemplo.sql para cargar
-   el catálogo real (5 categorías y sus piezas).
+   el catálogo real (5 categorías y sus piezas). El 02 no crea
+   usuarios: NO corras 12_usuarios_de_prueba.sql en producción.
    ========================================================== */
 
 USE Refaccionaria;
+GO
+
+-- Seguro: sin la confirmación, SET NOEXEC ON hace que SQL Server se brinque
+-- todo lo que sigue (hasta el SET NOEXEC OFF del final)
+DECLARE @confirmo NVARCHAR(20) = N'NO';
+IF @confirmo <> N'SI, BORRAR TODO'
+BEGIN
+    RAISERROR(N'No se borró nada. Si de verdad quieres borrar todo, cambia N''NO'' por N''SI, BORRAR TODO'' en @confirmo.', 16, 1);
+    SET NOEXEC ON;
+END
 GO
 
 BEGIN TRANSACTION;
@@ -56,9 +71,6 @@ UNION ALL SELECT 'CONVERSACION', COUNT(*) FROM CONVERSACION
 UNION ALL SELECT 'LOGIN (se quedan)', COUNT(*) FROM LOGIN;
 GO
 
-USE Refaccionaria;
-GO
-UPDATE PRODUCTOS
-SET IMAGEN = N'img/productos/marcha.jpg'
-WHERE Nombre = N'Marcha (motor de arranque)';
+-- Fin del seguro: SQL Server vuelve a ejecutar normalmente
+SET NOEXEC OFF;
 GO
