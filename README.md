@@ -190,6 +190,10 @@ En la base de datos del servidor (no en tu computadora):
 
 - **Intentos de login:** después de 5 contraseñas equivocadas con el mismo usuario desde la misma IP (o 20 con cualquier usuario), responde **429** durante 15 minutos. Entrar bien borra los fallos de ese usuario. Los contadores viven en memoria: reiniciar el Gateway los borra, y si hay varias copias del Gateway cada una cuenta por su lado.
 - **IP real detrás de Google Cloud:** ahí todas las conexiones llegan desde Google y la IP del visitante viene en el encabezado `X-Forwarded-For`. Con `PROXIES_DE_CONFIANZA` se le dice al Gateway cuántas direcciones agrega Google al final de ese encabezado: `1` en Cloud Run directo, `2` con un balanceador de carga delante. Sin la variable (`0`, en tu computadora y en Docker) se usa la IP de la conexión y no se le cree a `X-Forwarded-For`, porque cualquiera lo puede escribir. Con IPv6 se cuenta por bloque `/64`.
+- **Mismo tiempo exista o no el usuario:** si el usuario no existe, Login hace el mismo trabajo de bcrypt que al revisar una contraseña (~170 ms), así no se puede saber por el tiempo qué usuarios existen.
+- **Cuentas nuevas:** máximo 10 intentos de registro por IP en una hora (**429**), para frenar a quien crea cuentas en masa o prueba qué correos ya están registrados.
+- **Encabezados de seguridad:** la página lleva `Content-Security-Policy` (solo se ejecuta `script.js` de la misma tienda; si alguien lograra meter un `<script>` en un nombre o en el chat, el navegador no lo corre), y todas las respuestas llevan `X-Content-Type-Options`, `X-Frame-Options` (nadie mete la tienda dentro de otra página) y `Referrer-Policy`. Detrás de Google con HTTPS también `Strict-Transport-Security`. Las respuestas de la API no se guardan en caché ni dicen qué servidor hay detrás.
+- **CORS:** como la página y la API están en la misma dirección, no hace falta. En tu computadora se deja abierto (`*`) para poder abrir `index.html` con doble clic; con `ENTORNO=produccion` ningún otro sitio puede llamar a la API desde el navegador, salvo los que pongas en `CORS_ORIGENES` (ej. `CORS_ORIGENES=https://mitienda.com`).
 - **Tamaño:** rechaza peticiones de más de 1 MB (**413**).
 - **Tiempos de espera:** corta las conexiones que no terminan de mandar su petición y deja de esperar a un microservicio trabado después de 20 segundos (**502**).
 
@@ -221,7 +225,7 @@ Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cad
 | Qué prueba | Cuántas | ¿Necesita la base de datos? |
 |---|---|---|
 | **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador | 100 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
-| **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6) y que un atacante no bloquee a los demás | 8 | No |
+| **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6), que un atacante no bloquee a los demás, encabezados de seguridad, CSP, CORS y límite de registros | 15 | No |
 | **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 37 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
 
 También se pueden correr por separado:

@@ -580,7 +580,7 @@ async function iniciarPortada() {
             const vigencia = vigente ? `Hasta el ${fechaCorta(promo.fecha_fin)}`
                 : promo.activa ? `Empieza el ${fechaCorta(promo.fecha_inicio)}` : "Pausada";
             return `
-            <article class="promo" style="--i: ${i}">
+            <article class="promo">
                 <span class="promo-descuento">-${promo.descuento}%</span>
                 <h3>${escapar(promo.nombre)}</h3>
                 ${promo.descripcion ? `<p>${escapar(promo.descripcion)}</p>` : ""}
@@ -597,6 +597,9 @@ async function iniciarPortada() {
                 </div>` : ""}
             </article>`;
         }).join("");
+        // Cada promoción aparece un poquito después que la anterior (--i en estilo.css).
+        // Se pone desde aquí y no con style="..." en el HTML, que la CSP del Gateway no deja pasar
+        listaPromociones.querySelectorAll(".promo").forEach((promo, i) => promo.style.setProperty("--i", i));
     }
 
     listaCategorias.innerHTML = categorias.map(c => {

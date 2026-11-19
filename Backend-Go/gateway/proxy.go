@@ -49,6 +49,16 @@ func nuevoProxy(servicio Servicio) http.Handler {
 			"detail": "El servicio de " + servicio.Nombre + " no está disponible. Intenta de nuevo en un momento.",
 		})
 	}
+	// Lo que contesta Python: sin el encabezado "Server: uvicorn" (no hace falta
+	// decir qué programa hay detrás) y sin guardarse en cachés, porque puede
+	// llevar datos de la sesión (el token del login, las órdenes de alguien)
+	proxy.ModifyResponse = func(respuesta *http.Response) error {
+		respuesta.Header.Del("Server")
+		if respuesta.Header.Get("Cache-Control") == "" {
+			respuesta.Header.Set("Cache-Control", "no-store")
+		}
+		return nil
+	}
 	return proxy
 }
 
@@ -69,20 +79,6 @@ func limitarTamano(siguiente http.Handler) http.Handler {
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, tamanoMaximo)
-		siguiente.ServeHTTP(w, r)
-	})
-}
-
-// conCORS deja que la página web (otro puerto) pueda llamar al Gateway
-func conCORS(siguiente http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
 		siguiente.ServeHTTP(w, r)
 	})
 }

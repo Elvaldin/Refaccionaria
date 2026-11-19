@@ -33,6 +33,7 @@ func paginaWeb(carpeta string) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
+		w.Header().Set("Content-Security-Policy", politicaPagina)
 		archivos.ServeHTTP(w, r)
 	})
 }

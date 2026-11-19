@@ -74,6 +74,9 @@ class LoginUser:
         """Regresa el usuario si las credenciales son correctas, o None si no."""
         user = self.user_repository.find_by_username(username)
         if not user:
+            # Se hace el mismo trabajo que al revisar una contraseña (bcrypt es lento a propósito):
+            # si no, contestaría al instante y se sabría qué usuarios existen con solo medir el tiempo
+            self.password_hasher.hash(password)
             return None
         if not self.password_hasher.verify(password, user.password_hash):
             return None

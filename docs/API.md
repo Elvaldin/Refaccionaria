@@ -182,8 +182,9 @@ Todas las rutas del chat piden token.
 
 | Ruta | Descripción |
 |---|---|
-| `/` | Lista de todas las APIs con su dirección completa y si cada microservicio está encendido |
+| `/` | La página web de la tienda (`Frontend/`) |
+| `/gateway` | Lista de todas las APIs con su dirección completa y si cada microservicio está encendido (no existe con `ENTORNO=produccion`) |
 | `/docs` | Swagger con un menú para elegir el microservicio |
 | `/openapi/{servicio}.json` | Descripción OpenAPI de cada microservicio (`login`, `productos`, `promociones`, `ordenes`, `soporte`) |
 
-El Gateway deja pasar el encabezado `Authorization` (CORS) para que la página pueda mandar el token.
+La página y la API están en la misma dirección, así que el navegador no necesita CORS. Si otro sitio tiene que llamar a la API, se pone en `CORS_ORIGENES` (ver el README). Las respuestas de `/api` llevan `Cache-Control: no-store` y no dicen qué servidor hay detrás.

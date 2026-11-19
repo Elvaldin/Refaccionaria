@@ -37,13 +37,15 @@ class RepositorioFalso(UserRepository):
 class HasherFalso(PasswordHasher):
     """Para la prueba, el "hash" de una contraseña es la contraseña al revés."""
     def __init__(self):
-        self.llamadas = 0
+        self.llamadas = 0   # cuántas veces se revisó una contraseña
+        self.hashes = 0     # cuántas veces se sacó un hash
 
     def verify(self, plain_password, hashed_password):
         self.llamadas += 1
         return plain_password[::-1] == hashed_password
 
     def hash(self, plain_password):
+        self.hashes += 1
         return plain_password[::-1]
 
 
@@ -82,9 +84,11 @@ class PruebasLogin(unittest.TestCase):
     def test_contrasena_incorrecta_regresa_none(self):
         self.assertIsNone(self.login.execute("admin", "otra"))
 
-    def test_usuario_que_no_existe_regresa_none_sin_revisar_contrasena(self):
+    def test_usuario_que_no_existe_tarda_lo_mismo_que_uno_que_si(self):
+        # Regresa None, pero hace el mismo trabajo de bcrypt (un hash) que al revisar
+        # una contraseña: así no se puede saber por el tiempo si el usuario existe
         self.assertIsNone(self.login.execute("nadie", "Admin123"))
-        self.assertEqual(self.hasher.llamadas, 0)
+        self.assertEqual(self.hasher.hashes + self.hasher.llamadas, 1)
 
     # ----- Registrar usuario -----
     def test_cualquiera_se_registra_como_cliente_y_luego_puede_entrar(self):

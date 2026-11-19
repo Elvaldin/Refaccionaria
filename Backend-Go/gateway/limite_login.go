@@ -35,20 +35,35 @@ type intentos struct {
 type limitador struct {
 	mu        sync.Mutex
 	registros map[string]*intentos
+	ventana   time.Duration // cuánto tiempo se recuerdan los intentos
+}
+
+// nuevoLimitador crea un limitador y cada 5 minutos borra lo que ya venció,
+// para que el mapa no crezca sin fin
+func nuevoLimitador(ventana time.Duration) *limitador {
+	l := &limitador{registros: map[string]*intentos{}, ventana: ventana}
+	go func() {
+		for range time.Tick(5 * time.Minute) {
+			l.mu.Lock()
+			l.limpiar(time.Now())
+			l.mu.Unlock()
+		}
+	}()
+	return l
 }
 
 // espera regresa cuánto falta para que esa clave pueda volver a intentar (0 = puede ya)
 func (l *limitador) espera(clave string, maximo int, ahora time.Time) time.Duration {
 	r, ok := l.registros[clave]
-	if !ok || ahora.Sub(r.desde) > ventanaLogin || r.fallos < maximo {
+	if !ok || ahora.Sub(r.desde) > l.ventana || r.fallos < maximo {
 		return 0
 	}
-	return ventanaLogin - ahora.Sub(r.desde)
+	return l.ventana - ahora.Sub(r.desde)
 }
 
-func (l *limitador) sumarFallo(clave string, ahora time.Time) {
+func (l *limitador) sumar(clave string, ahora time.Time) {
 	r, ok := l.registros[clave]
-	if !ok || ahora.Sub(r.desde) > ventanaLogin {
+	if !ok || ahora.Sub(r.desde) > l.ventana {
 		l.registros[clave] = &intentos{fallos: 1, desde: ahora}
 		return
 	}
@@ -58,7 +73,7 @@ func (l *limitador) sumarFallo(clave string, ahora time.Time) {
 // limpiar borra lo que ya venció, para que el mapa no crezca sin fin
 func (l *limitador) limpiar(ahora time.Time) {
 	for clave, r := range l.registros {
-		if ahora.Sub(r.desde) > ventanaLogin {
+		if ahora.Sub(r.desde) > l.ventana {
 			delete(l.registros, clave)
 		}
 	}
@@ -134,14 +149,7 @@ func agruparIP(ip net.IP) string {
 }
 
 func limitarLogin(siguiente http.Handler) http.Handler {
-	l := &limitador{registros: map[string]*intentos{}}
-	go func() {
-		for range time.Tick(5 * time.Minute) {
-			l.mu.Lock()
-			l.limpiar(time.Now())
-			l.mu.Unlock()
-		}
-	}()
+	l := nuevoLimitador(ventanaLogin)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/api/login" {
@@ -183,8 +191,8 @@ func limitarLogin(siguiente http.Handler) http.Handler {
 		l.mu.Lock()
 		switch grabador.estado {
 		case http.StatusUnauthorized:
-			l.sumarFallo(claveUsuario, ahora)
-			l.sumarFallo(ip, ahora)
+			l.sumar(claveUsuario, ahora)
+			l.sumar(ip, ahora)
 		case http.StatusOK:
 			delete(l.registros, claveUsuario)
 		}

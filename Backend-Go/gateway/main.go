@@ -40,6 +40,10 @@ func main() {
 	// sirven para desarrollar y para la demo, pero en producción no se publican.
 	// Para apagarlas: ENTORNO=produccion
 	produccion := os.Getenv("ENTORNO") == "produccion"
+	cors, err := leerCORS(produccion)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if !produccion {
 		rutas.HandleFunc("GET /gateway", inicio)
 		rutas.HandleFunc("GET /docs", documentacion)
@@ -66,7 +70,7 @@ func main() {
 	// a propósito) no se queda ocupando el Gateway para siempre
 	servidor := &http.Server{
 		Addr:              direccion,
-		Handler:           conCORS(conRegistro(limitarTamano(limitarLogin(rutas)))),
+		Handler:           conCabeceras(conCORS(cors, conRegistro(limitarTamano(limitarLogin(limitarRegistro(rutas)))))),
 		ReadHeaderTimeout: 5 * time.Second,  // para mandar los encabezados
 		ReadTimeout:       15 * time.Second, // para mandar toda la petición
 		WriteTimeout:      30 * time.Second, // para contestar
@@ -84,5 +88,6 @@ func main() {
 	} else {
 		log.Printf("Límite de login: IP de la conexión (sin proxy delante)")
 	}
+	log.Printf("CORS: la API acepta llamadas del navegador desde %s", cors)
 	log.Fatal(servidor.ListenAndServe())
 }

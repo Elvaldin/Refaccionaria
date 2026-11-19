@@ -42,7 +42,7 @@ var servicios = []Servicio{
 	{
 		Nombre: "Soporte", Clave: "soporte", URL: "http://127.0.0.1:8004",
 		Rutas:    []string{"/api/soporte", "/api/conversaciones"},
-		Ejemplos: []string{"/api/soporte", "/api/conversaciones?id_login=1"},
+		Ejemplos: []string{"/api/soporte", "/api/conversaciones"},
 	},
 }
 

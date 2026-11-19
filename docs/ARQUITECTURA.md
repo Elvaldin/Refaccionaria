@@ -6,11 +6,13 @@
 ┌──────────────────────────┐
 │  Frontend (navegador)    │  index · producto · ordenes · contacto
 └────────────┬─────────────┘
-             │ HTTP  (http://127.0.0.1:8080/api/...)
+             │ HTTP  (la página y /api/... en la misma dirección, :8080)
 ┌────────────▼─────────────┐
-│  Gateway en Go  :8080    │  Reenvía cada ruta al microservicio que le toca,
-│                          │  agrega CORS, junta la documentación y avisa si
-│                          │  un microservicio está apagado (error 502).
+│  Gateway en Go  :8080    │  Entrega la página web y reenvía cada ruta /api al
+│                          │  microservicio que le toca. Pone los encabezados de
+│                          │  seguridad, limita intentos de login y registros,
+│                          │  junta la documentación y avisa si un
+│                          │  microservicio está apagado (error 502).
 └──┬────┬────┬────┬────┬───┘
    │    │    │    │    │
  :8000 :8001 :8002 :8003 :8004     Microservicios en Python (FastAPI)
