@@ -52,7 +52,8 @@ Login/
 │   ├── 10_usuario_app.sql       Crea el usuario de SQL Server de la app (refaccionaria_app)
 │   ├── 11_quitar_usuarios_de_prueba.sql Borra empleado, almacen y cliente de una base que los tenga
 │   ├── 12_usuarios_de_prueba.sql ⚠️ Solo en tu computadora: admin, empleado, almacen y cliente
-│   └── 13_usuarios_por_microservicio.sql Para producción: un usuario de SQL Server por microservicio, solo con sus permisos
+│   ├── 13_usuarios_por_microservicio.sql Para producción: un usuario de SQL Server por microservicio, solo con sus permisos
+│   └── 14_indices.sql           Solo para bases creadas antes de los índices (búsquedas más rápidas)
 ├── Backend/                     Microservicios en Python
 │   ├── requirements.txt
 │   ├── .env.example             Plantilla de la conexión a la base de datos
@@ -111,7 +112,7 @@ Los tres se pueden correr varias veces: solo crean lo que falta y no duplican da
 
 `BD/07_numeros_sin_saltos.sql` evita que SQL Server se brinque 1000 números cada vez que se reinicia (por eso un producto nuevo podía salir como `REF-5021`), y regresa cada contador al número más alto que existe. No cambia datos. Córrelo si tu base ya existía, o si ves códigos con saltos grandes. Las tablas que nunca han tenido filas no las toca, así que en una base nueva todo sigue empezando en 1. Es normal que falten números sueltos cuando algo se borra: SQL Server no reutiliza los números borrados.
 
-`BD/08_agregar_imagen.sql` agrega la columna `Imagen` (la foto de cada producto) a una base que ya existía. `BD/09_borrar_datos_de_prueba.sql` **borra para siempre** las órdenes, movimientos, promociones, chats, productos y categorías (no los usuarios ni el contacto) y reinicia los números; úsalo una sola vez antes de abrir la tienda y después vuelve a correr `02_datos_ejemplo.sql`. Para que no se corra por accidente, no borra nada hasta que cambies `N'NO'` por `N'SI, BORRAR TODO'` en la línea de `@confirmo` (cierra el archivo **sin guardar**).
+`BD/08_agregar_imagen.sql` agrega la columna `Imagen` (la foto de cada producto) a una base que ya existía. `BD/14_indices.sql` agrega los índices que ahora crea `01_crear_base.sql` (para que las órdenes, el inventario y el chat se busquen rápido aunque haya muchos datos); córrelo si tu base ya existía. `BD/09_borrar_datos_de_prueba.sql` **borra para siempre** las órdenes, movimientos, promociones, chats, productos y categorías (no los usuarios ni el contacto) y reinicia los números; úsalo una sola vez antes de abrir la tienda y después vuelve a correr `02_datos_ejemplo.sql`. Para que no se corra por accidente, no borra nada hasta que cambies `N'NO'` por `N'SI, BORRAR TODO'` en la línea de `@confirmo` (cierra el archivo **sin guardar**).
 
 `BD/10_usuario_app.sql` crea el usuario de SQL Server `refaccionaria_app`, con el que entran los 5 microservicios: solo puede leer y escribir datos de `Refaccionaria` (no borrar tablas ni tocar otras bases), así que la app ya no usa `sa`. Antes de ejecutarlo cambia `PEGA-AQUI-LA-CONTRASENA` por una contraseña nueva y, al terminar, cierra el archivo **sin guardar** (si no la cambias, no hace nada). `BD/11_quitar_usuarios_de_prueba.sql` y `BD/13_usuarios_por_microservicio.sql` son **para producción** (ver [Antes de publicar en Internet](#antes-de-publicar-en-internet)).
 
@@ -225,7 +226,7 @@ Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cad
 
 | Qué prueba | Cuántas | ¿Necesita la base de datos? |
 |---|---|---|
-| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador, promociones vencidas | 101 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
+| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador, promociones vencidas, quién puede cambiar el precio | 103 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
 | **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6), que un atacante no bloquee a los demás, encabezados de seguridad, CSP, CORS y límite de registros | 15 | No |
 | **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 38 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
 

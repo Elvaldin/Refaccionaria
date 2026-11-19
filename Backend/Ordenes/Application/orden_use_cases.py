@@ -23,6 +23,15 @@ PUEDEN_CREAR = {
     "Compra": [ROL_ADMINISTRADOR, ROL_ALMACENISTA],
 }
 
+# Quién puede poner un precio distinto al de la tienda en cada tipo de orden.
+# En una venta, solo el Administrador (un precio especial); los demás cobran el
+# precio de la tienda con su promoción. En una compra el precio es lo que cobró
+# el proveedor, y lo escribe quien la registra.
+PUEDEN_CAMBIAR_PRECIO = {
+    "Venta": [ROL_ADMINISTRADOR],
+    "Compra": [ROL_ADMINISTRADOR, ROL_ALMACENISTA],
+}
+
 # Quién puede avanzar cada tipo de orden (a En Proceso o Completada).
 # Cancelar es solo del Administrador.
 PUEDEN_AVANZAR = {
@@ -138,10 +147,10 @@ class GestionarOrdenes:
         for detalle in orden.detalles:
             if detalle.id_producto not in productos:
                 raise NoEncontradoError(f"No existe el producto {detalle.id_producto}")
-            # Si no mandan precio, se usa el precio actual del producto.
-            # Un Cliente siempre paga el precio de la tienda (no puede poner el suyo).
+            # Si no mandan precio, o quien la registra no puede cambiarlo (un Cliente o un
+            # Empleado en una venta), se usa el precio actual del producto.
             # En una venta se respeta la promoción vigente; en una compra al proveedor, no
-            if detalle.precio_unitario is None or rol == ROL_CLIENTE:
+            if detalle.precio_unitario is None or rol not in PUEDEN_CAMBIAR_PRECIO[orden.tipo]:
                 producto = productos[detalle.id_producto]
                 detalle.precio_unitario = producto.precio_de_venta() if orden.tipo == "Venta" else producto.precio
 

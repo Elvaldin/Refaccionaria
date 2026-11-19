@@ -124,6 +124,7 @@ Todas las rutas de Órdenes piden token.
 
 - `tipo`: `Compra` (entra mercancía) o `Venta` (sale mercancía).
 - Si no se manda `precio_unitario`, se usa el precio actual del producto. En una **Venta** ya lleva el descuento de su promoción vigente (si está en varias, el mayor); en una **Compra**, no.
+- En una **Venta** solo el Administrador puede poner otro precio (un precio especial); si un Empleado o un Cliente lo manda, se ignora y se cobra el de la tienda. En una **Compra** el precio es lo que cobró el proveedor y lo escribe quien la registra.
 - Al pasar a **Completada** se mueve el stock. Si una venta no tiene stock suficiente responde **409** con el detalle.
 - Estados: `Pendiente → En Proceso → Completada`, o `Cancelada` desde los dos primeros.
 
@@ -131,7 +132,7 @@ Los permisos dependen del rol de quien tiene la sesión (**403** si no tiene per
 
 | | Administrador | Empleado | Almacenista | Cliente |
 |---|---|---|---|---|
-| Crear Venta | ✅ | ✅ | ❌ | ✅ siempre al precio de la tienda (con promoción) |
+| Crear Venta | ✅ (puede dar un precio especial) | ✅ al precio de la tienda | ❌ | ✅ al precio de la tienda |
 | Crear Compra | ✅ | ❌ | ✅ | ❌ |
 | Avanzar Ventas (En Proceso / Completada) | ✅ | ✅ | ❌ | ❌ |
 | Avanzar Compras (En Proceso / Completada) | ✅ | ❌ | ✅ | ❌ |

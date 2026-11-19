@@ -45,19 +45,36 @@ class SQLServerPromocionRepository(PromocionRepository):
     def find_all(self, solo_vigentes: bool, ahora: datetime) -> List[Promocion]:
         # Las vencidas nunca salen. Se usa la hora de Python y no GETDATE():
         # el SQL Server de Docker tiene la hora UTC
-        query = PROMOCION_SELECT + " WHERE Fecha_fin >= ?"
+        filtros = " WHERE Fecha_fin >= ?"
         params = [ahora]
         if solo_vigentes:
-            query += " AND Activa = 1 AND Fecha_inicio <= ?"
+            filtros += " AND Activa = 1 AND Fecha_inicio <= ?"
             params.append(ahora)
-        query += " ORDER BY Fecha_inicio DESC"
 
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute(query, *params)
+            cursor.execute(PROMOCION_SELECT + filtros + " ORDER BY Fecha_inicio DESC", *params)
             promociones = [_row_to_promocion(r) for r in cursor.fetchall()]
-            return [_cargar_productos(cursor, p) for p in promociones]
+            if not promociones:
+                return []
+            # Los productos de TODAS esas promociones en una sola consulta (antes era una por promoción)
+            por_id = {p.id: p for p in promociones}
+            cursor.execute(
+                """
+                SELECT pp.Id_promocion, p.Id_producto, p.Nombre, p.Precio
+                FROM PROMOCIONPRODUCTO pp
+                JOIN PRODUCTOS p ON p.Id_producto = pp.Id_producto
+                WHERE pp.Id_promocion IN (SELECT Id_promocion FROM PROMOCION""" + filtros + """)
+                ORDER BY p.Nombre
+                """,
+                *params,
+            )
+            for r in cursor.fetchall():
+                promo = por_id.get(r.Id_promocion)
+                if promo:
+                    promo.productos.append(ProductoEnPromocion(r.Id_producto, r.Nombre, float(r.Precio), promo.descuento))
+            return promociones
         finally:
             conn.close()
 

@@ -206,6 +206,15 @@ class PruebasOrdenes(unittest.TestCase):
         self.assertEqual(creada.detalles[0].precio_unitario, 650.0)
         self.assertEqual(creada.total, 1300.0)
 
+    def test_el_empleado_cobra_el_precio_de_la_tienda(self):
+        # Un Empleado no puede vender a otro precio (ej. a $1 a un conocido)
+        creada = self.casos.crear(orden("Venta", DetalleOrden(1, 2, precio_unitario=1), id_login=EMPLEADO))
+        self.assertEqual(creada.detalles[0].precio_unitario, 650.0)
+
+    def test_el_administrador_si_puede_dar_un_precio_especial(self):
+        creada = self.casos.crear(orden("Venta", DetalleOrden(1, 2, precio_unitario=600), id_login=ADMIN))
+        self.assertEqual(creada.detalles[0].precio_unitario, 600)
+
     def test_la_venta_respeta_la_promocion_vigente(self):
         self.repo.stock[1].descuento = 15   # Balatas está en una promoción del 15%
         creada = self.casos.crear(orden("Venta", DetalleOrden(1, 2), id_login=CLIENTE))

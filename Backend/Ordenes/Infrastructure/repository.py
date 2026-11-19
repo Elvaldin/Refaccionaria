@@ -19,46 +19,53 @@ def _row_to_orden(row) -> Orden:
     )
 
 
+DETALLE_SELECT = """
+    SELECT d.Id_orden, d.Id_producto, p.Nombre, d.Cantidad, d.precio_unitario
+    FROM DETALLEORDEN d
+    JOIN PRODUCTOS p ON p.Id_producto = d.Id_producto
+"""
+
+
+def _row_to_detalle(r) -> DetalleOrden:
+    return DetalleOrden(id_producto=r.Id_producto, producto=r.Nombre, cantidad=r.Cantidad,
+                        precio_unitario=float(r.precio_unitario))
+
+
 def _cargar_detalles(cursor, orden: Orden) -> Orden:
-    cursor.execute(
-        """
-        SELECT d.Id_producto, p.Nombre, d.Cantidad, d.precio_unitario
-        FROM DETALLEORDEN d
-        JOIN PRODUCTOS p ON p.Id_producto = d.Id_producto
-        WHERE d.Id_orden = ?
-        ORDER BY d.Id_detalle
-        """,
-        orden.id,
-    )
-    orden.detalles = [
-        DetalleOrden(id_producto=r.Id_producto, producto=r.Nombre, cantidad=r.Cantidad,
-                     precio_unitario=float(r.precio_unitario))
-        for r in cursor.fetchall()
-    ]
+    cursor.execute(DETALLE_SELECT + " WHERE d.Id_orden = ? ORDER BY d.Id_detalle", orden.id)
+    orden.detalles = [_row_to_detalle(r) for r in cursor.fetchall()]
     return orden
 
 
 class SQLServerOrdenRepository(OrdenRepository):
     def find_all(self, tipo: Optional[str], estado: Optional[str], id_login: Optional[int] = None) -> List[Orden]:
-        query = ORDEN_SELECT + " WHERE 1 = 1"
+        filtros = " WHERE 1 = 1"
         params = []
         if tipo:
-            query += " AND Tipo = ?"
+            filtros += " AND Tipo = ?"
             params.append(tipo)
         if estado:
-            query += " AND Estado = ?"
+            filtros += " AND Estado = ?"
             params.append(estado)
         if id_login is not None:
-            query += " AND Id_login = ?"
+            filtros += " AND Id_login = ?"
             params.append(id_login)
-        query += " ORDER BY Fecha DESC"
 
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute(query, *params)
+            cursor.execute(ORDEN_SELECT + filtros + " ORDER BY Fecha DESC", *params)
             ordenes = [_row_to_orden(r) for r in cursor.fetchall()]
-            return [_cargar_detalles(cursor, o) for o in ordenes]
+            if not ordenes:
+                return []
+            # Los productos de TODAS esas órdenes en una sola consulta (antes era una por orden)
+            por_id = {o.id: o for o in ordenes}
+            cursor.execute(DETALLE_SELECT + " WHERE d.Id_orden IN (SELECT Id_orden FROM ORDENES"
+                           + filtros + ") ORDER BY d.Id_detalle", *params)
+            for r in cursor.fetchall():
+                if r.Id_orden in por_id:   # una orden creada justo entre las dos consultas se ignora
+                    por_id[r.Id_orden].detalles.append(_row_to_detalle(r))
+            return ordenes
         finally:
             conn.close()
 

@@ -131,6 +131,8 @@ const ROLES = ["Administrador", "Empleado", "Almacenista", "Cliente"];
 // aquí solo sirven para no mostrar botones que el usuario no puede usar)
 const PUEDEN_CREAR = { Venta: ["Administrador", "Empleado", "Cliente"], Compra: ["Administrador", "Almacenista"] };
 const PUEDEN_AVANZAR = { Venta: ["Administrador", "Empleado"], Compra: ["Administrador", "Almacenista"] };
+// Quién puede poner un precio distinto al de la tienda (en una venta, solo el Administrador)
+const PUEDEN_CAMBIAR_PRECIO = { Venta: ["Administrador"], Compra: ["Administrador", "Almacenista"] };
 
 function leerRol() {
     try { return localStorage.getItem("rol"); } catch (e) { return null; }
@@ -1796,7 +1798,7 @@ function iniciarOrdenes() {
                 ${catalogo.map(p => `<option value="${p.id}">${escapar(p.nombre)} (stock ${p.stock})</option>`).join("")}
             </select>
             <input type="number" class="cantidad-fila" min="1" step="1" value="1" aria-label="Cantidad" inputmode="numeric">
-            <input type="number" class="precio-fila" min="0" step="0.01" aria-label="Precio unitario" inputmode="decimal" ${esCliente() ? "readonly" : ""}>
+            <input type="number" class="precio-fila" min="0" step="0.01" aria-label="Precio unitario" inputmode="decimal">
             <button type="button" class="quitar-fila" aria-label="Quitar producto">✕</button>`;
         filas.append(fila);
         if (idProducto) fila.querySelector("select").value = idProducto;
@@ -1805,9 +1807,12 @@ function iniciarOrdenes() {
         actualizarTotal();
     }
 
-    // Al elegir un producto se sugiere su precio actual (se puede cambiar).
-    // En una venta lleva el descuento de su promoción, igual que en el microservicio
+    // Al elegir un producto se sugiere su precio actual. En una venta lleva el descuento
+    // de su promoción, igual que en el microservicio. Solo quien puede cambiar el precio
+    // (el Administrador en ventas; Administrador y Almacenista en compras) lo puede editar
     function ponerPrecio(fila) {
+        const tipo = document.getElementById("orden-tipo").value;
+        fila.querySelector(".precio-fila").readOnly = !(PUEDEN_CAMBIAR_PRECIO[tipo] || []).includes(leerRol());
         const producto = catalogo.find(p => p.id === Number(fila.querySelector("select").value));
         if (!producto) {
             fila.querySelector(".precio-fila").value = 0;
