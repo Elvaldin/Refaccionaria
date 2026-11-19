@@ -51,7 +51,8 @@ Login/
 │   ├── 09_borrar_datos_de_prueba.sql ⚠️ Borra órdenes, chats, promociones y productos (una sola vez, antes de abrir; pide confirmación)
 │   ├── 10_usuario_app.sql       Crea el usuario de SQL Server de la app (refaccionaria_app)
 │   ├── 11_quitar_usuarios_de_prueba.sql Borra empleado, almacen y cliente de una base que los tenga
-│   └── 12_usuarios_de_prueba.sql ⚠️ Solo en tu computadora: admin, empleado, almacen y cliente
+│   ├── 12_usuarios_de_prueba.sql ⚠️ Solo en tu computadora: admin, empleado, almacen y cliente
+│   └── 13_usuarios_por_microservicio.sql Para producción: un usuario de SQL Server por microservicio, solo con sus permisos
 ├── Backend/                     Microservicios en Python
 │   ├── requirements.txt
 │   ├── .env.example             Plantilla de la conexión a la base de datos
@@ -112,7 +113,7 @@ Los tres se pueden correr varias veces: solo crean lo que falta y no duplican da
 
 `BD/08_agregar_imagen.sql` agrega la columna `Imagen` (la foto de cada producto) a una base que ya existía. `BD/09_borrar_datos_de_prueba.sql` **borra para siempre** las órdenes, movimientos, promociones, chats, productos y categorías (no los usuarios ni el contacto) y reinicia los números; úsalo una sola vez antes de abrir la tienda y después vuelve a correr `02_datos_ejemplo.sql`. Para que no se corra por accidente, no borra nada hasta que cambies `N'NO'` por `N'SI, BORRAR TODO'` en la línea de `@confirmo` (cierra el archivo **sin guardar**).
 
-`BD/10_usuario_app.sql` crea el usuario de SQL Server `refaccionaria_app`, con el que entran los 5 microservicios: solo puede leer y escribir datos de `Refaccionaria` (no borrar tablas ni tocar otras bases), así que la app ya no usa `sa`. Antes de ejecutarlo cambia `PEGA-AQUI-LA-CONTRASENA` por una contraseña nueva y, al terminar, cierra el archivo **sin guardar** (si no la cambias, no hace nada). `BD/11_quitar_usuarios_de_prueba.sql` es **solo para producción** (ver [Antes de publicar en Internet](#antes-de-publicar-en-internet)).
+`BD/10_usuario_app.sql` crea el usuario de SQL Server `refaccionaria_app`, con el que entran los 5 microservicios: solo puede leer y escribir datos de `Refaccionaria` (no borrar tablas ni tocar otras bases), así que la app ya no usa `sa`. Antes de ejecutarlo cambia `PEGA-AQUI-LA-CONTRASENA` por una contraseña nueva y, al terminar, cierra el archivo **sin guardar** (si no la cambias, no hace nada). `BD/11_quitar_usuarios_de_prueba.sql` y `BD/13_usuarios_por_microservicio.sql` son **para producción** (ver [Antes de publicar en Internet](#antes-de-publicar-en-internet)).
 
 **Fotos de los productos.** Están en `Frontend/img/productos`. Si agregas una foto, ponla en esa carpeta y escribe su ruta (`img/productos/archivo.jpg`) en el campo **Foto** al editar el producto.
 
@@ -177,7 +178,7 @@ Antes de arrancar, el script:
 En la base de datos del servidor (no en tu computadora):
 
 1. Corre `BD/01_crear_base.sql` y `BD/02_datos_ejemplo.sql` (crean las tablas, el catálogo y el contacto). **No** corras `BD/12_usuarios_de_prueba.sql`: sus contraseñas están en este README.
-2. Corre `BD/10_usuario_app.sql` con una contraseña **nueva** (no la de tu computadora) y ponla en los `.env` del servidor, junto con un `TOKEN_SECRETO` **nuevo**.
+2. Corre `BD/13_usuarios_por_microservicio.sql` con **5 contraseñas nuevas y distintas** (no la de tu computadora). Crea un usuario de SQL Server para cada microservicio (`refaccionaria_login`, `refaccionaria_productos`, `refaccionaria_promociones`, `refaccionaria_ordenes` y `refaccionaria_soporte`), cada uno solo con lo que necesita: por ejemplo, solo Login puede leer la columna `Password`, Órdenes solo puede cambiar el `Stock` de un producto (no su precio) y nadie puede borrar órdenes. Pon a cada microservicio **su** usuario y contraseña (`BD_USER` y `BD_PASSWORD`), y a los 5 el mismo `TOKEN_SECRETO` **nuevo**. En el servidor no hace falta `BD/10_usuario_app.sql`: ese usuario puede leer y cambiar todas las tablas.
 3. Si esa base ya tenía los usuarios de prueba (por ejemplo, porque es una copia de la de tu computadora), corre `BD/11_quitar_usuarios_de_prueba.sql` y cámbiale la contraseña al admin con `cambiar_contrasena.py admin`.
 4. Crea tu Administrador con un usuario, un correo y una contraseña de 12 caracteres o más (no se muestra en pantalla):
    ```bash
@@ -191,7 +192,7 @@ En la base de datos del servidor (no en tu computadora):
 - **Intentos de login:** después de 5 contraseñas equivocadas con el mismo usuario desde la misma IP (o 20 con cualquier usuario), responde **429** durante 15 minutos. Entrar bien borra los fallos de ese usuario. Los contadores viven en memoria: reiniciar el Gateway los borra, y si hay varias copias del Gateway cada una cuenta por su lado.
 - **IP real detrás de Google Cloud:** ahí todas las conexiones llegan desde Google y la IP del visitante viene en el encabezado `X-Forwarded-For`. Con `PROXIES_DE_CONFIANZA` se le dice al Gateway cuántas direcciones agrega Google al final de ese encabezado: `1` en Cloud Run directo, `2` con un balanceador de carga delante. Sin la variable (`0`, en tu computadora y en Docker) se usa la IP de la conexión y no se le cree a `X-Forwarded-For`, porque cualquiera lo puede escribir. Con IPv6 se cuenta por bloque `/64`.
 - **Mismo tiempo exista o no el usuario:** si el usuario no existe, Login hace el mismo trabajo de bcrypt que al revisar una contraseña (~170 ms), así no se puede saber por el tiempo qué usuarios existen.
-- **Cuentas nuevas:** máximo 10 intentos de registro por IP en una hora (**429**), para frenar a quien crea cuentas en masa o prueba qué correos ya están registrados.
+- **Cuentas nuevas:** con `ENTORNO=produccion`, máximo 10 intentos de registro por IP en una hora (**429**), para frenar a quien crea cuentas en masa o prueba qué correos ya están registrados. En tu computadora el límite es 100, para poder correr `pruebas.sh` varias veces.
 - **Encabezados de seguridad:** la página lleva `Content-Security-Policy` (solo se ejecuta `script.js` de la misma tienda; si alguien lograra meter un `<script>` en un nombre o en el chat, el navegador no lo corre), y todas las respuestas llevan `X-Content-Type-Options`, `X-Frame-Options` (nadie mete la tienda dentro de otra página) y `Referrer-Policy`. Detrás de Google con HTTPS también `Strict-Transport-Security`. Las respuestas de la API no se guardan en caché ni dicen qué servidor hay detrás.
 - **CORS:** como la página y la API están en la misma dirección, no hace falta. En tu computadora se deja abierto (`*`) para poder abrir `index.html` con doble clic; con `ENTORNO=produccion` ningún otro sitio puede llamar a la API desde el navegador, salvo los que pongas en `CORS_ORIGENES` (ej. `CORS_ORIGENES=https://mitienda.com`).
 - **Tamaño:** rechaza peticiones de más de 1 MB (**413**).
@@ -224,9 +225,9 @@ Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cad
 
 | Qué prueba | Cuántas | ¿Necesita la base de datos? |
 |---|---|---|
-| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador | 100 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
+| **Casos de uso** de los 5 microservicios (`Backend/*/tests/`): login, registro, roles y permisos, validaciones, descuentos, estados de las órdenes, stock que sube y baja, venta sin stock, chat de soporte, editar productos y promociones, precio con promoción en las ventas, hora de las órdenes, cambiar contraseña, crear el Administrador, promociones vencidas | 101 | No. Usan repositorios falsos en memoria, gracias a la arquitectura limpia |
 | **Gateway en Go** (`Backend-Go/gateway/*_test.go`): la IP que usa el límite de login (con y sin proxy, IP fingida, IPv6), que un atacante no bloquee a los demás, encabezados de seguridad, CSP, CORS y límite de registros | 15 | No |
-| **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 37 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
+| **APIs de punta a punta** (`pruebas/prueba_api.py`): página → Gateway → Python → SQL Server, con el token de cada usuario de prueba, incluidos tokens falsos o alterados | 38 | Sí. Corre antes `./iniciar.sh`. Todo lo que crea lo borra al final |
 
 También se pueden correr por separado:
 

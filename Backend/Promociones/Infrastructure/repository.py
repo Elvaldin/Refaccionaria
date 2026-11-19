@@ -43,11 +43,12 @@ def _cargar_productos(cursor, promocion: Promocion) -> Promocion:
 
 class SQLServerPromocionRepository(PromocionRepository):
     def find_all(self, solo_vigentes: bool, ahora: datetime) -> List[Promocion]:
-        query = PROMOCION_SELECT
-        params = []
+        # Las vencidas nunca salen. Se usa la hora de Python y no GETDATE():
+        # el SQL Server de Docker tiene la hora UTC
+        query = PROMOCION_SELECT + " WHERE Fecha_fin >= ?"
+        params = [ahora]
         if solo_vigentes:
-            # Se usa la hora de Python y no GETDATE(): el SQL Server de Docker tiene la hora UTC
-            query += " WHERE Activa = 1 AND ? BETWEEN Fecha_inicio AND Fecha_fin"
+            query += " AND Activa = 1 AND Fecha_inicio <= ?"
             params.append(ahora)
         query += " ORDER BY Fecha_inicio DESC"
 

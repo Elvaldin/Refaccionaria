@@ -17,7 +17,7 @@ class PromocionesFalsas(PromocionRepository):
 
     def find_all(self, solo_vigentes, ahora):
         return [p for p in self.datos.values()
-                if not solo_vigentes or (p.activa and p.fecha_inicio <= ahora <= p.fecha_fin)]
+                if p.fecha_fin >= ahora and (not solo_vigentes or (p.activa and p.fecha_inicio <= ahora))]
     
     def find_by_id(self, id_promocion):
         promo = self.datos.get(id_promocion)
@@ -141,14 +141,21 @@ class PruebasPromociones(unittest.TestCase):
         with self.assertRaises(DatosInvalidosError):
             self.casos.actualizar(cambio)   # pero no moverlo a otro día pasado
 
-    def test_las_vencidas_se_borran_al_listar(self):
+    def test_las_vencidas_no_salen_y_ver_la_lista_no_borra_nada(self):
         vigente = self.casos.crear(promocion(inicio="2026-10-15", fin="2026-10-31"))
         termina_hoy = self.casos.crear(promocion(inicio="2026-10-15", fin="2026-10-15T23:59:59"))
         vencida = promocion(inicio="2026-09-01", fin="2026-09-30")
         self.repo.save(vencida, [])   # se guarda directo, como si se hubiera creado el mes pasado
         ids = [p.id for p in self.casos.listar()]
         self.assertEqual(ids, [vigente.id, termina_hoy.id])
-        self.assertNotIn(vencida.id, self.repo.datos)   # se borró de verdad
+        self.assertEqual([p.id for p in self.casos.listar(solo_vigentes=True)], [vigente.id, termina_hoy.id])
+        self.assertIn(vencida.id, self.repo.datos)      # listar (GET) no cambia la base
+
+    def test_las_vencidas_se_borran_cuando_el_admin_cambia_promociones(self):
+        vencida = promocion(inicio="2026-09-01", fin="2026-09-30")
+        self.repo.save(vencida, [])
+        self.casos.crear(promocion(inicio="2026-10-15", fin="2026-10-31"))
+        self.assertEqual([p.fecha_fin >= HOY for p in self.repo.datos.values()], [True])   # solo queda la nueva
 
     def test_vigentes_son_las_que_van_hoy(self):
         actual = self.casos.crear(promocion(inicio="2026-10-15", fin="2026-10-31"))

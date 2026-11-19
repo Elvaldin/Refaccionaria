@@ -127,12 +127,15 @@ func conCORS(c configCORS, siguiente http.Handler) http.Handler {
 
 // Cuántas veces se puede intentar crear una cuenta desde la misma IP por hora.
 // Frena a quien crea cuentas en masa o prueba qué correos ya están registrados.
+// En tu computadora el límite es más alto: pruebas.sh intenta varios registros
+// cada vez que corre, y con 10 no se podría correr dos veces en una hora.
 const (
-	ventanaRegistro   = time.Hour
-	maxRegistrosPorIP = 10
+	ventanaRegistro        = time.Hour
+	maxRegistrosProduccion = 10
+	maxRegistrosDesarrollo = 100
 )
 
-func limitarRegistro(siguiente http.Handler) http.Handler {
+func limitarRegistro(maxRegistrosPorIP int, siguiente http.Handler) http.Handler {
 	l := nuevoLimitador(ventanaRegistro)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/api/usuarios" {

@@ -65,12 +65,20 @@ def setUpModule():
 
 class PruebaGateway(unittest.TestCase):
     def test_los_cinco_microservicios_estan_encendidos(self):
-        codigo, pagina = pedir("GET", "/")
+        # La lista de microservicios está en /gateway (en "/" va la página de la tienda)
+        codigo, pagina = pedir("GET", "/gateway")
         self.assertEqual(codigo, 200)
         self.assertEqual(pagina.count("✅ encendido"), 5, "Algún microservicio de Python está apagado")
 
+    def test_la_pagina_de_la_tienda_sale_del_gateway(self):
+        codigo, pagina = pedir("GET", "/")
+        self.assertEqual(codigo, 200)
+        self.assertIn("REFACCIONARIA", pagina)
+
     def test_ruta_que_no_existe(self):
-        self.assertEqual(pedir("GET", "/api/no-existe")[0], 404)
+        codigo, respuesta = pedir("GET", "/api/no-existe")
+        self.assertEqual(codigo, 404)
+        self.assertIn("detail", respuesta)   # en JSON, como las demás respuestas de la API
 
 
 class PruebaLogin(unittest.TestCase):

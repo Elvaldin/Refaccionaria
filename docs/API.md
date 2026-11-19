@@ -83,11 +83,13 @@ En las tablas de abajo, 🔒 marca las rutas que piden token.
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/dashboard` | Promociones **vigentes hoy**, con sus productos y precio con descuento |
-| GET | `/api/promociones` | Todas. `?vigentes=true` para solo las vigentes |
+| GET | `/api/promociones` | Todas las que no han vencido (también las que todavía no empiezan). `?vigentes=true` para solo las vigentes |
 | GET | `/api/promociones/{id}` | Una promoción |
 | POST | `/api/promociones` 🔒 | Crear `{ "nombre", "descuento", "fecha_inicio", "fecha_fin", "activa", "productos": [1, 2] }` |
 | PUT | `/api/promociones/{id}` 🔒 | Editar. Si trae `"productos": [...]`, esos quedan como sus productos; si no, no se tocan |
 | DELETE | `/api/promociones/{id}` 🔒 | Borrar (también quita sus productos) |
+
+Las promociones vencidas no salen en ninguna lista. Ver las listas (GET) no cambia nada en la base: las vencidas se borran cuando el Administrador crea, edita o elimina promociones. Si una fecha llega con zona horaria (ej. `2026-11-20T06:00:00Z`), se pasa a la hora de la tienda.
 | POST | `/api/promociones/{id}/productos` 🔒 | Agregar producto `{ "id_producto": 1 }` (409 si ya estaba) |
 | DELETE | `/api/promociones/{id}/productos/{id_producto}` 🔒 | Quitar producto |
 

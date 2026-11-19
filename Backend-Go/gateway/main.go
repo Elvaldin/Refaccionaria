@@ -44,6 +44,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	maxRegistros := maxRegistrosDesarrollo
+	if produccion {
+		maxRegistros = maxRegistrosProduccion
+	}
 	if !produccion {
 		rutas.HandleFunc("GET /gateway", inicio)
 		rutas.HandleFunc("GET /docs", documentacion)
@@ -70,7 +74,7 @@ func main() {
 	// a propósito) no se queda ocupando el Gateway para siempre
 	servidor := &http.Server{
 		Addr:              direccion,
-		Handler:           conCabeceras(conCORS(cors, conRegistro(limitarTamano(limitarLogin(limitarRegistro(rutas)))))),
+		Handler:           conCabeceras(conCORS(cors, conRegistro(limitarTamano(limitarLogin(limitarRegistro(maxRegistros, rutas)))))),
 		ReadHeaderTimeout: 5 * time.Second,  // para mandar los encabezados
 		ReadTimeout:       15 * time.Second, // para mandar toda la petición
 		WriteTimeout:      30 * time.Second, // para contestar

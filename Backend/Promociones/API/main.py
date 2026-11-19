@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -22,6 +22,16 @@ class PromocionRequest(BaseModel):
     fecha_inicio: datetime
     fecha_fin: datetime
     activa: bool = True
+
+    @field_validator("fecha_inicio", "fecha_fin")
+    @classmethod
+    def hora_de_la_tienda(cls, fecha: datetime) -> datetime:
+        # Si la fecha viene con zona horaria (ej. "2026-11-20T00:00:00Z"), se pasa a la
+        # hora de la tienda (TZ) y se le quita la zona, como todas las demás fechas.
+        # Sin esto, comparar fechas con y sin zona truena (error 500)
+        if fecha.tzinfo is not None:
+            return fecha.astimezone().replace(tzinfo=None)
+        return fecha
 
 
 class CrearPromocionRequest(PromocionRequest):

@@ -12,7 +12,8 @@ class DatosInvalidosError(Exception):
 class PromocionRepository(ABC):
     @abstractmethod
     def find_all(self, solo_vigentes: bool, ahora: datetime) -> List[Promocion]:
-        """Con solo_vigentes=True regresa solo las activas que van en esa fecha y hora."""
+        """Las que no han vencido en esa fecha y hora (las vencidas nunca salen).
+        Con solo_vigentes=True, solo las activas que ya empezaron."""
         pass
 
     @abstractmethod
@@ -58,11 +59,13 @@ class GestionarPromociones:
         self.ahora = ahora
 
     def listar(self, solo_vigentes: bool = False) -> List[Promocion]:
-        # Antes de listar se borran las vencidas: así nunca aparece una promoción que ya terminó
-        self.borrar_vencidas()
+        # Las vencidas no salen en la lista. Aquí ya no se borran: esta lista la pide
+        # cualquier visitante (GET) y ver la página no debe cambiar la base de datos
         return self.promocion_repository.find_all(solo_vigentes, self.ahora())
 
     def borrar_vencidas(self) -> int:
+        """Borra las promociones que ya terminaron. Se hace cuando el Administrador
+        cambia promociones (crear, editar, eliminar...), no cuando alguien solo las ve."""
         return self.promocion_repository.delete_vencidas(self.ahora())
 
     def obtener(self, id_promocion: int) -> Promocion:
@@ -74,6 +77,7 @@ class GestionarPromociones:
     def crear(self, promocion: Promocion, ids_productos: Optional[List[int]] = None) -> Promocion:
         """Crea la promoción y le agrega sus productos de una vez."""
         ids_productos = ids_productos or []
+        self.borrar_vencidas()
         self._validar_fechas(promocion)
         if promocion.fecha_inicio.date() < self.ahora().date():
             raise DatosInvalidosError("La promoción no puede empezar en un día que ya pasó")
@@ -83,6 +87,7 @@ class GestionarPromociones:
 
     def actualizar(self, promocion: Promocion, ids_productos: Optional[List[int]] = None) -> Promocion:
         """Cambia los datos de la promoción. Si llegan ids_productos, esos quedan como sus productos."""
+        self.borrar_vencidas()
         actual = self.obtener(promocion.id)
         self._validar_fechas(promocion)
         # Si ya empezó puede dejar su fecha de inicio como está, pero no moverla a otro día pasado
@@ -95,10 +100,12 @@ class GestionarPromociones:
         return self.obtener(promocion.id)
 
     def eliminar(self, id_promocion: int) -> None:
+        self.borrar_vencidas()
         if not self.promocion_repository.delete(id_promocion):
             raise NoEncontradoError(f"No existe la promocion {id_promocion}")
 
     def agregar_producto(self, id_promocion: int, id_producto: int) -> Promocion:
+        self.borrar_vencidas()
         self.obtener(id_promocion)
         if not self.promocion_repository.producto_existe(id_producto):
             raise NoEncontradoError(f"No existe el producto {id_producto}")
@@ -107,6 +114,7 @@ class GestionarPromociones:
         return self.obtener(id_promocion)
 
     def quitar_producto(self, id_promocion: int, id_producto: int) -> Promocion:
+        self.borrar_vencidas()
         if not self.promocion_repository.remove_producto(id_promocion, id_producto):
             raise NoEncontradoError(f"El producto {id_producto} no esta en la promocion {id_promocion}")
         return self.obtener(id_promocion)

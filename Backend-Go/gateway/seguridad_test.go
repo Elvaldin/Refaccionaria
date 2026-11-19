@@ -123,7 +123,7 @@ func TestPreflightContestaSinLlegarAPython(t *testing.T) {
 
 func TestLimiteDeRegistrosPorIP(t *testing.T) {
 	conProxies(t, 0)
-	limite := limitarRegistro(ok)
+	limite := limitarRegistro(maxRegistrosProduccion, ok)
 	registrar := func(ip string) int {
 		r := httptest.NewRequest(http.MethodPost, "/api/usuarios", strings.NewReader(`{}`))
 		r.RemoteAddr = ip + ":5000"
@@ -131,13 +131,13 @@ func TestLimiteDeRegistrosPorIP(t *testing.T) {
 		limite.ServeHTTP(w, r)
 		return w.Code
 	}
-	for i := 0; i < maxRegistrosPorIP; i++ {
+	for i := 0; i < maxRegistrosProduccion; i++ {
 		if codigo := registrar("198.51.100.66"); codigo != http.StatusOK {
 			t.Fatalf("intento %d: %d", i+1, codigo)
 		}
 	}
 	if codigo := registrar("198.51.100.66"); codigo != http.StatusTooManyRequests {
-		t.Fatalf("el intento %d debía ser 429, fue %d", maxRegistrosPorIP+1, codigo)
+		t.Fatalf("el intento %d debía ser 429, fue %d", maxRegistrosProduccion+1, codigo)
 	}
 	if codigo := registrar("203.0.113.7"); codigo != http.StatusOK {
 		t.Fatalf("otra IP debía poder registrarse, recibió %d", codigo)
