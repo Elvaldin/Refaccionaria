@@ -1,0 +1,88 @@
+# Refaccionaria en AWS: corre en UN servidor EC2.
+#
+#   Visitante ──HTTPS──► Caddy (80/443) ──► Gateway (Go + página) ──► 5 microservicios
+#                                                                      └──► RDS (SQL Server)
+#
+# Desde la carpeta principal del proyecto, en el servidor:
+#   DOMINIO=<tu-dominio> docker compose -f aws/docker-compose.yml up -d --build
+#
+# - Caddy saca el certificado HTTPS solo (Let's Encrypt) y lo renueva.
+# - Solo Caddy abre puertos. El Gateway y los microservicios no se ven desde Internet.
+# - Las contraseñas están en el .env de cada microservicio (Backend/<Servicio>/.env),
+#   que se crea a mano en el servidor y nunca se sube a GitHub.
+# Guía completa: docs/DESPLIEGUE_AWS.md
+
+x-registro: &registro
+  # Que los registros (logs) no llenen el disco del servidor
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+x-microservicio: &microservicio
+  <<: *registro
+  restart: unless-stopped
+  environment:
+    ENTORNO: produccion
+    # El conector que trae la imagen (aunque el .env diga otro)
+    BD_DRIVER: ODBC Driver 18 for SQL Server
+
+services:
+  login:
+    <<: *microservicio
+    build: { context: ../Backend, args: { SERVICIO: Login } }
+    env_file: ../Backend/Login/.env
+
+  productos:
+    <<: *microservicio
+    build: { context: ../Backend, args: { SERVICIO: Productos } }
+    env_file: ../Backend/Productos/.env
+
+  promociones:
+    <<: *microservicio
+    build: { context: ../Backend, args: { SERVICIO: Promociones } }
+    env_file: ../Backend/Promociones/.env
+
+  ordenes:
+    <<: *microservicio
+    build: { context: ../Backend, args: { SERVICIO: Ordenes } }
+    env_file: ../Backend/Ordenes/.env
+
+  soporte:
+    <<: *microservicio
+    build: { context: ../Backend, args: { SERVICIO: Soporte } }
+    env_file: ../Backend/Soporte/.env
+
+  gateway:
+    <<: *registro
+    build: { context: .., dockerfile: Backend-Go/gateway/Dockerfile }
+    restart: unless-stopped
+    environment:
+      ENTORNO: produccion
+      # Caddy está en medio: la IP real del visitante llega en X-Forwarded-For
+      # (para el límite de intentos de login) y X-Forwarded-Proto dice que fue HTTPS
+      PROXIES_DE_CONFIANZA: "1"
+      URL_LOGIN: http://login:8080
+      URL_PRODUCTOS: http://productos:8080
+      URL_PROMOCIONES: http://promociones:8080
+      URL_ORDENES: http://ordenes:8080
+      URL_SOPORTE: http://soporte:8080
+    depends_on: [login, productos, promociones, ordenes, soporte]
+
+  caddy:
+    <<: *registro
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO, por ejemplo DOMINIO=3-90-12-34.sslip.io}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data       # los certificados: se guardan aunque se reinicie
+      - caddy_config:/config
+    depends_on: [gateway]
+
+volumes:
+  caddy_datos:
+  caddy_config:

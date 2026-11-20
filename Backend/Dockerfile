@@ -3,13 +3,16 @@
 #   docker build --build-arg SERVICIO=Login -t refaccionaria-login Backend
 #
 # La imagen NO lleva contraseñas: BD_PASSWORD, TOKEN_SECRETO, etc. se dan al
-# arrancar el contenedor (docker-compose.yml en tu Mac, Secret Manager en Google Cloud).
+# arrancar el contenedor (docker-compose.yml en tu Mac, los .env del servidor en AWS).
 FROM python:3.15-slim-bookworm
 
 # Conector de Microsoft para SQL Server (ODBC Driver 18).
 # ACCEPT_EULA=Y acepta la licencia de Microsoft de ese conector.
 # libgssapi-krb5-2 se instala a propósito: el conector la necesita y, si no,
 # el "autoremove" del final la borra junto con curl y gnupg.
+# Certificados de Amazon RDS: con ellos, en AWS la conexión cifrada a la base
+# REVISA que de verdad sea RDS (BD_CONFIAR_CERTIFICADO=no), no solo que esté cifrada.
+# El archivo de Amazon trae varios certificados juntos; se separan uno por archivo.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl gnupg ca-certificates \
  && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
@@ -18,6 +21,11 @@ RUN apt-get update \
       > /etc/apt/sources.list.d/mssql-release.list \
  && apt-get update \
  && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 unixodbc libgssapi-krb5-2 tzdata \
+ && curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /tmp/rds.pem \
+ && mkdir -p /usr/local/share/ca-certificates/amazon-rds \
+ && awk '/BEGIN CERTIFICATE/ {n++} {print > ("/usr/local/share/ca-certificates/amazon-rds/rds-" n ".crt")}' /tmp/rds.pem \
+ && update-ca-certificates \
+ && rm /tmp/rds.pem \
  && apt-get purge -y curl gnupg \
  && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*

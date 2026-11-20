@@ -1,0 +1,10 @@
+# Caddy: la puerta de entrada de la tienda en AWS.
+# - Saca y renueva solo el certificado HTTPS de {$DOMINIO}.
+# - Lo que llegue por HTTP (puerto 80) lo manda a HTTPS.
+# - Todo lo demás se lo pasa al Gateway, que entrega la página y la API.
+#   Caddy agrega X-Forwarded-For (la IP del visitante) y X-Forwarded-Proto: https.
+
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy gateway:8080
+}

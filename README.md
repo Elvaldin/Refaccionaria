@@ -83,10 +83,12 @@ Login/
 ├── docs/
 │   ├── ARQUITECTURA.md          Capas, dependencias y decisiones
 │   ├── API.md                   Todas las rutas de la API
+│   ├── DESPLIEGUE_AWS.md        Cómo publicarla en AWS (EC2 + RDS), paso a paso
 │   └── DESPLIEGUE_GCP.md        Cómo publicarla en Google Cloud (Cloud Run + Cloud SQL), paso a paso
 ├── gcp/desplegar.sh             Construye las imágenes y publica los 6 servicios en Cloud Run
 ├── cloudbuild.yaml              Las 6 imágenes en Cloud Build (linux/amd64)
 ├── docker-compose.yml           Los 6 servicios en contenedores, en tu Mac
+├── aws/                         docker-compose.yml y Caddyfile para el servidor EC2 de AWS
 ├── pruebas/prueba_api.py        Prueba de punta a punta por el Gateway
 ├── iniciar.sh                   Arranca todo con un solo comando
 └── pruebas.sh                   Corre todas las pruebas automáticas
@@ -223,7 +225,9 @@ Apaga antes `./iniciar.sh`, porque los dos usan el puerto 8080. Para apagar los 
 | `docker-compose.yml` | Levanta los 6 contenedores. Solo el Gateway se abre a tu Mac (en `127.0.0.1:8080`) |
 | `.dockerignore` | Evita que los `.env`, las pruebas y `__pycache__` entren a las imágenes |
 
-**Para publicarla en Internet** sigue [docs/DESPLIEGUE_GCP.md](docs/DESPLIEGUE_GCP.md): Google Cloud Run para el Gateway y los microservicios (estos últimos privados: solo el Gateway llega a ellos, con `IDENTIDAD_GOOGLE=si`), Cloud SQL for SQL Server con IP privada y las contraseñas en Secret Manager. `docker compose` no se puede subir tal cual a Cloud Run: cada servicio se publica por separado con `gcp/desplegar.sh`.
+**Para publicarla en Internet** sigue [docs/DESPLIEGUE_AWS.md](docs/DESPLIEGUE_AWS.md): un servidor EC2 con `aws/docker-compose.yml` (Caddy pone el HTTPS y es lo único que se ve desde Internet) y Amazon RDS for SQL Server, sin acceso público y con el certificado revisado.
+
+También está la versión para Google Cloud, [docs/DESPLIEGUE_GCP.md](docs/DESPLIEGUE_GCP.md): Google Cloud Run para el Gateway y los microservicios (estos últimos privados: solo el Gateway llega a ellos, con `IDENTIDAD_GOOGLE=si`), Cloud SQL for SQL Server con IP privada y las contraseñas en Secret Manager. `docker compose` no se puede subir tal cual a Cloud Run: cada servicio se publica por separado con `gcp/desplegar.sh`.
 
 Las imágenes **no llevan contraseñas**: `docker compose` lee los `.env` de cada microservicio al arrancar. Dentro de Docker, el Gateway encuentra a los microservicios con las variables `URL_LOGIN`, `URL_PRODUCTOS`, `URL_PROMOCIONES`, `URL_ORDENES` y `URL_SOPORTE`, y escucha en `HOST=0.0.0.0`; sin esas variables usa las direcciones de `iniciar.sh`.
 
