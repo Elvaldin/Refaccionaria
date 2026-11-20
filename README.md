@@ -88,7 +88,7 @@ Login/
 ├── gcp/desplegar.sh             Construye las imágenes y publica los 6 servicios en Cloud Run
 ├── cloudbuild.yaml              Las 6 imágenes en Cloud Build (linux/amd64)
 ├── docker-compose.yml           Los 6 servicios en contenedores, en tu Mac
-├── aws/                         docker-compose.yml y Caddyfile para el servidor EC2 de AWS
+├── aws/                         docker-compose.yml, Caddyfile y cargar_base.sh para el servidor EC2 de AWS
 ├── pruebas/prueba_api.py        Prueba de punta a punta por el Gateway
 ├── iniciar.sh                   Arranca todo con un solo comando
 └── pruebas.sh                   Corre todas las pruebas automáticas
